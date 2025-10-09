@@ -102,3 +102,147 @@ async def health_check():
     except Exception as e:
         return {"status": "error", "detail": f"Erro ao ler BD: {str(e)}"}
     return {"status": "ok", "total_livros": result[0]["total"]}
+
+
+################################################################
+#################### Endpoints Opcionais #######################
+################################################################
+
+@app.get("/api/v1/stats/overview")
+async def stats_overview():
+    # Total de livros
+    total_livros = query_db("SELECT COUNT(*) as total FROM books_details")[0]["total"]
+
+    # Preço médio (removendo símbolos de moeda e vírgulas)
+    query_precos = """
+        SELECT preço FROM books_details WHERE preço IS NOT NULL AND preço != ''
+    """
+    precos = query_db(query_precos)
+
+
+    preco_medio = round(sum([float(row["preço"]) for row in precos]) / len(precos), 2) if precos else 0
+
+
+    # Distribuição de ratings
+    query_ratings = """
+        SELECT rating, COUNT(*) as total
+        FROM books_details
+        WHERE rating IS NOT NULL AND rating != ''
+        GROUP BY rating
+    """
+    ratings = query_db(query_ratings)
+
+    return {
+        "total_livros": total_livros,
+        "preco_medio": preco_medio,
+        "distribuicao_ratings": ratings
+    }
+
+
+# Estatísticas detalhadas por categoria 
+@app.get("/api/v1/stats/categories")
+async def stats_categories():
+    # Consulta as categorias e preços
+    query = """
+        SELECT categoria, preço
+        FROM books_details
+        WHERE categoria IS NOT NULL AND categoria != ''
+    """
+    rows = query_db(query)
+
+    categorias = {}
+
+    for row in rows:
+        categoria = str(row["categoria"]).strip()
+        preco_raw = row["preço"]
+
+        # Tenta converter o preço direto em float (pode vir como None)
+        try:
+            preco = float(preco_raw)
+        except (ValueError, TypeError):
+            preco = None
+
+        if categoria not in categorias:
+            categorias[categoria] = {"quantidade": 0, "precos": []}
+
+        categorias[categoria]["quantidade"] += 1
+        if preco is not None:
+            categorias[categoria]["precos"].append(preco)
+
+    # Calcula estatísticas por categoria
+    stats = []
+    for categoria, data in categorias.items():
+        precos = data["precos"]
+        if precos:
+            preco_medio = round(sum(precos) / len(precos), 2)
+            preco_min = round(min(precos), 2)
+            preco_max = round(max(precos), 2)
+        else:
+            preco_medio = preco_min = preco_max = 0
+
+        stats.append({
+            "categoria": categoria,
+            "quantidade": data["quantidade"],
+            "preco_medio": preco_medio,
+            "preco_min": preco_min,
+            "preco_max": preco_max
+        })
+
+    return {"categorias": stats}
+
+
+# Lista os livros com melhor avaliação 
+
+@app.get("/api/v1/books/top-rated")
+async def top_rated_books(limit: int = 10):
+    """
+    Lista os livros com melhor avaliação (rating mais alto).
+
+    """
+
+    # Puxa título, categoria e avaliação da tabela
+    query = """
+        SELECT titulo, categoria, rating
+        FROM books_details
+        WHERE rating = 5
+    """
+    livros = query_db(query)
+
+    return {"top_rated_books": livros}
+
+# Filtra livros dentro de uma faixa de preço específica.
+# /api/v1/books/price-range?min={min}&max={max}
+@app.get("/api/v1/books/price-range")
+async def books_price_range(
+    min: float = Query(..., description="Preço mínimo"),
+    max: float = Query(..., description="Preço máximo")
+):
+    """
+    Filtra livros dentro de uma faixa de preço específica.
+    """
+    query = """
+        SELECT titulo, categoria, preço, disponibilidade
+        FROM books_details
+        WHERE preço IS NOT NULL AND preço != ''
+    """
+    rows = query_db(query)
+
+    livros_filtrados = []
+    for row in rows:
+        # Limpa o preço (removendo símbolos e convertendo para float)
+        preco_raw = str(row["preço"]).strip()
+        try:
+            preco = float(preco_raw)
+        except (ValueError, TypeError):
+            continue
+
+        if min <= preco <= max:
+            livros_filtrados.append({
+                "titulo": row["titulo"].strip(),
+                "categoria": row["categoria"].strip(),
+                "preço": preco,
+                "disponibilidade": str(row["disponibilidade"]).strip() if row["disponibilidade"] else ""
+
+            })
+
+    return {"livros_filtrados": livros_filtrados}
