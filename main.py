@@ -1,68 +1,125 @@
-from fastapi import FastAPI, Query, APIRouter, Depends, HTTPException, status
-from fastapi.security import HTTPBasic, HTTPBasicCredentials
-from pydantic import BaseModel
-import pandas as pd   
-from fastapi.responses import JSONResponse
+# main.py
+from fastapi import FastAPI, Query, Depends, HTTPException, status, Body, Header
+from fastapi.security import OAuth2PasswordRequestForm
 import os
 import sqlite3
-
+from auth import get_password_hash, verify_password, create_access_token, get_current_user
+from jose import jwt
+from auth import SECRET_KEY, ALGORITHM 
 
 app = FastAPI(
     title="API Tech Challenge",
     version="1.0.0",
     description="Trabalho Fase 1"
-    )
-
+)
 
 # Caminho do banco de dados
 DB_FILE = os.path.join(os.path.dirname(__file__), "data", "challenge1.sqlite")
 
-# Função utilitária para consultar o banco
-def query_db(query: str, params: tuple = ()):
+# Função utilitária para consultar o banco SQLite
+def query_db(query: str, params: tuple = (), fetchone=False):
     conn = sqlite3.connect(DB_FILE)
-    conn.row_factory = sqlite3.Row  # Retorna como dicionário
+    conn.row_factory = sqlite3.Row
     cur = conn.cursor()
     cur.execute(query, params)
     rows = cur.fetchall()
+    conn.commit()
     conn.close()
+    if fetchone:
+        return dict(rows[0]) if rows else None
     return [dict(row) for row in rows]
 
-# Home
+# Rotas públicas
 @app.get("/")
 async def home():
-    return "Hello, FastAPI!"
+    return {"message": "Hello, FastAPI!"}
 
-################################################################
-#################### Endpoints Obrigatórios ####################
-################################################################
+# Criar usuário (hash de senha incluso)
+@app.post("/add_user")
+def add_user(user: dict = Body(...)):
+    username = user.get("username")
+    password = user.get("password")
+    
+    if not username or not password:
+        raise HTTPException(status_code=400, detail="Username e password são obrigatórios")
+    
+    hashed_pw = get_password_hash(password)
+    
+    conn = sqlite3.connect(DB_FILE)
+    cur = conn.cursor()
+    
+    # Cria tabela caso não exista
+    cur.execute("""
+        CREATE TABLE IF NOT EXISTS users (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            username TEXT UNIQUE NOT NULL,
+            password TEXT NOT NULL
+        )
+    """)
+    
+    try:
+        cur.execute("INSERT INTO users (username, password) VALUES (?, ?)", (username, hashed_pw))
+        conn.commit()
+    except sqlite3.IntegrityError:
+        conn.close()
+        raise HTTPException(status_code=400, detail="Usuário já existe")
+    
+    conn.close()
+    return {"message": f"Usuário {username} criado com sucesso!"}
 
-# lista todos os livros disponíveis na base de dados
+# Login e geração de token
+@app.post("/api/v1/auth/login")
+def login_for_access_token(form_data: OAuth2PasswordRequestForm = Depends()):
+    user = query_db("SELECT * FROM users WHERE username = ?", (form_data.username,), fetchone=True)
+    if not user or not verify_password(form_data.password, user["password"]):
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Usuário ou senha incorretos",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+    access_token = create_access_token(data={"sub": user["username"]})
+    return {"access_token": access_token, "token_type": "bearer"}
+
+# -> função pra inserir nos endpoints sensiveis -> current_user: dict = Depends(get_current_user) - aqui solicita o token gerado
+
+@app.post("/api/v1/auth/refresh")
+def refresh_token(authorization: str = Header(...)):
+    """
+    Renova o token JWT.
+    Recebe o token atual no header Authorization: Bearer <token>
+    """
+    # Verifica se o header começa com "Bearer "
+    if not authorization.startswith("Bearer "):
+        raise HTTPException(status_code=401, detail="Token inválido")
+    
+    token = authorization.split(" ")[1]
+
+    try:
+        # Decodifica o token atual
+        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+        username = payload.get("sub")
+        if username is None:
+            raise HTTPException(status_code=401, detail="Token inválido")
+    except Exception:
+        raise HTTPException(status_code=401, detail="Token inválido ou expirado")
+    
+    # Gera um novo token
+    new_token = create_access_token(data={"sub": username})
+    return {"access_token": new_token, "token_type": "bearer"}
+
+# Rotas protegidas
 @app.get("/api/v1/books")
 async def get_books():
-    query = """
-        SELECT titulo
-        FROM books_details
-        WHERE disponibilidade > 0
-    """
-    livros = query_db(query)
+    livros = query_db("SELECT titulo FROM books_details WHERE disponibilidade > 0")
     return {"livros_disponiveis": livros}
 
-
-
-# retorna detalhes completos de um livro específico pelo ID
 @app.get("/api/v1/books/{id:int}")
 async def get_book(id: int):
-    query = """
-        SELECT rowid as ID, *
-        FROM books_details
-        WHERE rowid = ?
-    """
-    result = query_db(query, (id,))
+    result = query_db("SELECT rowid as ID, * FROM books_details WHERE rowid = ?", (id,), fetchone=True)
     if not result:
         return {"error": "Livro não encontrado"}
-    return result[0]
+    return result
 
-# busca livros por título e/ou categoria
 @app.get("/api/v1/books/search")
 async def search_books(
     title: str = Query(None, description="Título ou parte do título do livro"),
@@ -81,95 +138,62 @@ async def search_books(
     livros = query_db(query, tuple(params))
     return {"resultado": livros}
 
-# lista todas as categorias disponíveis
 @app.get("/api/v1/categories")
 async def get_categories():
-    query = """
-        SELECT DISTINCT categoria
-        FROM books_details
-        WHERE disponibilidade > 0
-    """
-    categorias = query_db(query)
+    categorias = query_db("SELECT DISTINCT categoria FROM books_details WHERE disponibilidade > 0")
     return {"Categorias_disponiveis": categorias}
 
-# verifica status da API e conectividade com os dados
 @app.get("/api/v1/health")
 async def health_check():
     if not os.path.exists(DB_FILE):
         return {"status": "error", "detail": "Banco de dados não encontrado"}
     try:
-        result = query_db("SELECT COUNT(*) as total FROM books_details")
+        result = query_db("SELECT COUNT(*) as total FROM books_details", fetchone=True)
     except Exception as e:
         return {"status": "error", "detail": f"Erro ao ler BD: {str(e)}"}
-    return {"status": "ok", "total_livros": result[0]["total"]}
+    return {"status": "ok", "total_livros": result["total"]}
 
-
-################################################################
-#################### Endpoints Opcionais #######################
-################################################################
-
+# Estatísticas gerais
 @app.get("/api/v1/stats/overview")
 async def stats_overview():
-    # Total de livros
-    total_livros = query_db("SELECT COUNT(*) as total FROM books_details")[0]["total"]
-
-    # Preço médio (removendo símbolos de moeda e vírgulas)
-    query_precos = """
-        SELECT preço FROM books_details WHERE preço IS NOT NULL AND preço != ''
-    """
-    precos = query_db(query_precos)
-
-
-    preco_medio = round(sum([float(row["preço"]) for row in precos]) / len(precos), 2) if precos else 0
-
-
-    # Distribuição de ratings
-    query_ratings = """
+    total_livros = query_db("SELECT COUNT(*) as total FROM books_details", fetchone=True)["total"]
+    precos_raw = query_db("SELECT preço FROM books_details WHERE preço IS NOT NULL AND preço != ''")
+    precos = []
+    for row in precos_raw:
+        try:
+            precos.append(float(row["preço"]))
+        except:
+            continue
+    preco_medio = round(sum(precos) / len(precos), 2) if precos else 0
+    ratings = query_db("""
         SELECT rating, COUNT(*) as total
         FROM books_details
         WHERE rating IS NOT NULL AND rating != ''
         GROUP BY rating
-    """
-    ratings = query_db(query_ratings)
-
+    """)
     return {
         "total_livros": total_livros,
         "preco_medio": preco_medio,
         "distribuicao_ratings": ratings
     }
 
-
-# Estatísticas detalhadas por categoria 
+# Estatísticas por categoria
 @app.get("/api/v1/stats/categories")
 async def stats_categories():
-    # Consulta as categorias e preços
-    query = """
-        SELECT categoria, preço
-        FROM books_details
-        WHERE categoria IS NOT NULL AND categoria != ''
-    """
-    rows = query_db(query)
-
+    rows = query_db("SELECT categoria, preço FROM books_details WHERE categoria IS NOT NULL AND categoria != ''")
     categorias = {}
-
     for row in rows:
         categoria = str(row["categoria"]).strip()
-        preco_raw = row["preço"]
-
-        # Tenta converter o preço direto em float (pode vir como None)
         try:
-            preco = float(preco_raw)
+            preco = float(row["preço"])
         except (ValueError, TypeError):
             preco = None
-
         if categoria not in categorias:
             categorias[categoria] = {"quantidade": 0, "precos": []}
-
         categorias[categoria]["quantidade"] += 1
         if preco is not None:
             categorias[categoria]["precos"].append(preco)
 
-    # Calcula estatísticas por categoria
     stats = []
     for categoria, data in categorias.items():
         precos = data["precos"]
@@ -179,7 +203,6 @@ async def stats_categories():
             preco_max = round(max(precos), 2)
         else:
             preco_medio = preco_min = preco_max = 0
-
         stats.append({
             "categoria": categoria,
             "quantidade": data["quantidade"],
@@ -187,62 +210,29 @@ async def stats_categories():
             "preco_min": preco_min,
             "preco_max": preco_max
         })
-
     return {"categorias": stats}
 
-
-# Lista os livros com melhor avaliação 
-
+# Top rated
 @app.get("/api/v1/books/top-rated")
 async def top_rated_books(limit: int = 10):
-    """
-    Lista os livros com melhor avaliação (rating mais alto).
+    livros = query_db("SELECT titulo, categoria, rating FROM books_details WHERE rating = 5")
+    return {"top_rated_books": livros[:limit]}
 
-    """
-
-    # Puxa título, categoria e avaliação da tabela
-    query = """
-        SELECT titulo, categoria, rating
-        FROM books_details
-        WHERE rating = 5
-    """
-    livros = query_db(query)
-
-    return {"top_rated_books": livros}
-
-# Filtra livros dentro de uma faixa de preço específica.
-# /api/v1/books/price-range?min={min}&max={max}
+# Faixa de preço
 @app.get("/api/v1/books/price-range")
-async def books_price_range(
-    min: float = Query(..., description="Preço mínimo"),
-    max: float = Query(..., description="Preço máximo")
-):
-    """
-    Filtra livros dentro de uma faixa de preço específica.
-    """
-    query = """
-        SELECT titulo, categoria, preço, disponibilidade
-        FROM books_details
-        WHERE preço IS NOT NULL AND preço != ''
-    """
-    rows = query_db(query)
-
+async def books_price_range(min: float = Query(...), max: float = Query(...)):
+    rows = query_db("SELECT titulo, categoria, preço, disponibilidade FROM books_details WHERE preço IS NOT NULL AND preço != ''")
     livros_filtrados = []
     for row in rows:
-        # Limpa o preço (removendo símbolos e convertendo para float)
-        preco_raw = str(row["preço"]).strip()
         try:
-            preco = float(preco_raw)
+            preco = float(row["preço"])
         except (ValueError, TypeError):
             continue
-
         if min <= preco <= max:
             livros_filtrados.append({
                 "titulo": row["titulo"].strip(),
                 "categoria": row["categoria"].strip(),
                 "preço": preco,
                 "disponibilidade": str(row["disponibilidade"]).strip() if row["disponibilidade"] else ""
-
             })
-
     return {"livros_filtrados": livros_filtrados}

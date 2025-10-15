@@ -8,7 +8,7 @@ if defined _OLD_CODEPAGE (
     "%SystemRoot%\System32\chcp.com" 65001 > nul
 )
 
-set VIRTUAL_ENV=C:\Users\delyj\Documents\Fiap\PÓS TECH ML ENGINEERING\FASE 1\Trabalho em grupo\Tech-Challenge-1-MLE\venv
+set VIRTUAL_ENV=C:\Users\delyj\Documents\Fiap\PÓS TECH ML ENGINEERING\FASE 1\Trabalho em grupo\tech-challengev2\tech_challenge_1_mle\venv
 
 if not defined PROMPT set PROMPT=$P$G
 
