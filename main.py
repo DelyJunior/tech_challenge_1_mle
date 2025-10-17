@@ -266,7 +266,7 @@ async def get_ml_features():
     return {"features_data": features_data, "total_registros": len(features_data)}
 
 @app.get("/api/v1/ml/training-data")
-async def get_ml_training_data(current_user: dict = Depends(get_current_user)):
+async def get_ml_training_data():
     """
     Retorna um dataset pronto para treinamento, com a coluna 'categoria' codificada em One-Hot (OHE).
     A coluna 'Y_preco' é o target (o que se quer prever).
@@ -319,7 +319,6 @@ async def get_ml_training_data(current_user: dict = Depends(get_current_user)):
 @app.post("/api/v1/ml/predictions")
 async def receive_predictions(
     predictions_payload: List[Dict[str, Any]] = Body(..., description="Lista de objetos de predição, contendo features e o valor predito."),
-    current_user: dict = Depends(get_current_user)
 ):
     """
     Recebe um lote de predições de um modelo ML e as armazena no banco de dados SQLite para persistência.
