@@ -251,7 +251,8 @@ async def get_ml_features():
     for row in rows:
         rating = float(row["rating"])
         preco = float(row["preço"])
-        
+        disponibilidade = row["disponibilidade"]
+
         # Filtra apenas registros que tenham dados numéricos válidos para rating e preço
         if rating is not None and preco is not None:
             features_data.append({
@@ -260,7 +261,7 @@ async def get_ml_features():
                 "preco": preco,
                 "categoria": str(row["categoria"]).strip(),
                 # Simplifica disponibilidade para um valor numérico (ex: 1 se disponível, 0 se indisponível/desconhecido)
-                "disponibilidade_num": 1 if (row["disponibilidade"] is not None and int(row["disponibilidade"]) > 0) else 0
+                "disponibilidade": disponibilidade
             })
             
     return {"features_data": features_data, "total_registros": len(features_data)}
