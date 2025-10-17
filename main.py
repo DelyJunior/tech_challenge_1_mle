@@ -266,64 +266,123 @@ async def get_ml_features():
     return {"features_data": features_data, "total_registros": len(features_data)}
 
 @app.get("/api/v1/ml/training-data")
-async def get_ml_training_data():
+async def get_ml_training_data(current_user: dict = Depends(get_current_user)):
     """
-    Retorna um dataset pronto para treinamento, assumindo que queremos prever o preço (Y) 
-    com base no rating e categoria (X).
+    Retorna um dataset pronto para treinamento, com a coluna 'categoria' codificada em One-Hot (OHE).
+    A coluna 'Y_preco' é o target (o que se quer prever).
     """
+    # 1. Obter todas as categorias únicas (vocabulário)
+    unique_categories_raw = query_db("SELECT DISTINCT categoria FROM books_details WHERE categoria IS NOT NULL AND categoria != ''")
+    
+    # Lista ordenada de categorias
+    unique_categories = [str(row['categoria']).strip() for row in unique_categories_raw]
+    
+    # Mapeamento para obter o índice do vetor OHE rapidamente
+    category_to_index = {cat: i for i, cat in enumerate(unique_categories)}
+    num_categories = len(unique_categories)
+    
+    # 2. Obter os dados brutos
     rows = query_db("SELECT rating, preço, categoria FROM books_details")
     training_set = []
 
+    # 3. Processar cada linha e aplicar OHE
     for row in rows:
-        rating = float(row["rating"])
-        preco = float(row["preço"])
+        rating = safe_float(row["rating"])
+        preco = safe_float(row["preço"])
         categoria = str(row["categoria"]).strip()
         
         # Garante que as variáveis X (rating) e Y (preço) são numéricas e válidas
         if rating is not None and preco is not None and categoria:
+            
+            # Inicializa o vetor OHE com zeros
+            one_hot_vector = [0] * num_categories
+            
+            # Pega o índice e seta para 1
+            cat_index = category_to_index.get(categoria)
+            if cat_index is not None:
+                 one_hot_vector[cat_index] = 1
+
             training_set.append({
                 "X_rating": rating,
-                "X_categoria": categoria, # Categoria para One-Hot Encoding no cliente
+                # Retorna o vetor OHE em vez da string da categoria
+                "X_categoria_ohe": one_hot_vector, 
                 "Y_preco": preco
             })
             
-    return {"training_data": training_set, "total_samples": len(training_set)}
+    return {
+        "training_data": training_set, 
+        "total_samples": len(training_set),
+        # Retorna o mapa para que o cliente saiba qual categoria corresponde a qual índice do vetor OHE
+        "one_hot_encoding_map": unique_categories 
+    }
 
 @app.post("/api/v1/ml/predictions")
 async def receive_predictions(
     predictions_payload: List[Dict[str, Any]] = Body(..., description="Lista de objetos de predição, contendo features e o valor predito."),
+    current_user: dict = Depends(get_current_user)
 ):
     """
-    Endpoint de demonstração para receber e processar dados de predição.
-    Em um ambiente real, este endpoint faria validação, logging e salvaria as predições
-    em um banco de dados de resultados ou datalake.
+    Recebe um lote de predições de um modelo ML e as armazena no banco de dados SQLite para persistência.
     """
     
-    # 1. Validação simples do payload
     if not isinstance(predictions_payload, list) or not all(isinstance(item, dict) for item in predictions_payload):
         raise HTTPException(status_code=400, detail="O corpo deve ser uma lista de objetos JSON.")
         
     num_predictions = len(predictions_payload)
+    successful_inserts = 0
     
-    # 2. Processamento/Simulação de Análise
-    predictions_received = []
-    for i, pred in enumerate(predictions_payload):
-        # Exemplo: Simular a verificação de quais predições têm preço alto
-        is_high_price = pred.get("predicted_price", 0) > 50.0 
+    conn = sqlite3.connect(DB_FILE)
+    cur = conn.cursor()
+
+    # 1. Cria a tabela de predições se ela não existir
+    cur.execute("""
+        CREATE TABLE IF NOT EXISTS ml_predictions (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            timestamp TEXT NOT NULL,
+            predicted_price REAL,
+            input_features_json TEXT NOT NULL,
+            model_version TEXT
+        )
+    """)
+    
+    now = datetime.datetime.now().isoformat()
+    
+    # 2. Insere cada predição no banco de dados
+    for pred in predictions_payload:
+        predicted_price = pred.get("predicted_price")
+        input_features = pred.get("input_features", {})
+        model_version = pred.get("model_version")
         
-        predictions_received.append({
-            "id": i + 1,
-            "success": True,
-            "input_data_sample": {k: v for k, v in pred.items() if k != 'metadata' and len(str(v)) < 50}, # Evita logs muito longos
-            "status_analysis": "Preço Predito Alto" if is_high_price else "Preço Predito Baixo"
-        })
-        
-    # 3. Retorno do resultado do processamento
-    return {
-        "message": f"Sucesso ao receber {num_predictions} predições.",
-        "analysis_summary": {
-            "total_recebido": num_predictions,
-            "total_alto_preco_simulado": sum(1 for p in predictions_received if p["status_analysis"] == "Preço Predito Alto")
-        },
-        "processed_predictions": predictions_received
-    }
+        # Validação básica: verifica se a predição chave é um número
+        if predicted_price is None or not isinstance(predicted_price, (int, float)):
+            continue
+
+        try:
+            # Serializa os objetos Python complexos (features) para JSON string
+            input_features_json = json.dumps(input_features)
+            
+            cur.execute("""
+                INSERT INTO ml_predictions (timestamp, predicted_price, input_features_json, model_version)
+                VALUES (?, ?, ?, ?)
+            """, (now, predicted_price, input_features_json, model_version))
+            
+            successful_inserts += 1
+            
+        except Exception as e:
+            # Em um app real, você faria um logging mais robusto
+            print(f"Erro ao inserir predição: {e}") 
+            continue
+            
+    conn.commit()
+    conn.close()
+            
+    if successful_inserts == num_predictions:
+        return {
+            "message": f"Sucesso ao receber e armazenar {successful_inserts} de {num_predictions} predições no SQLite.",
+            "status": "stored_ok"
+        }
+    else:
+        return {
+            "message": f"Recebidas {num_predictions} predições, mas apenas {successful_inserts} foram armazenadas com sucesso. Verifique os logs do servidor para detalhes.",
+            "status": "partial_success"
+        }
