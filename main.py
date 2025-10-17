@@ -8,6 +8,7 @@ from jose import jwt
 from auth import SECRET_KEY, ALGORITHM 
 from typing import List, Dict, Any 
 import datetime
+import json
 
 app = FastAPI(
     title="API Tech Challenge",
