@@ -236,3 +236,93 @@ async def books_price_range(min: float = Query(...), max: float = Query(...)):
                 "disponibilidade": str(row["disponibilidade"]).strip() if row["disponibilidade"] else ""
             })
     return {"livros_filtrados": livros_filtrados}
+
+@app.get("/api/v1/ml/features")
+async def get_ml_features(current_user: dict = Depends(get_current_user)):
+    """
+    Retorna dados limpos e formatados para serem usados como features de um modelo ML.
+    Filtra entradas onde rating ou preço não podem ser convertidos para float.
+    """
+    rows = query_db("SELECT titulo, rating, preço, categoria, disponibilidade FROM books_details")
+    features_data = []
+    
+    for row in rows:
+        rating = safe_float(row["rating"])
+        preco = safe_float(row["preço"])
+        
+        # Filtra apenas registros que tenham dados numéricos válidos para rating e preço
+        if rating is not None and preco is not None:
+            features_data.append({
+                "titulo": str(row["titulo"]).strip(),
+                "rating": rating,
+                "preco": preco,
+                "categoria": str(row["categoria"]).strip(),
+                # Simplifica disponibilidade para um valor numérico (ex: 1 se disponível, 0 se indisponível/desconhecido)
+                "disponibilidade_num": 1 if (row["disponibilidade"] is not None and int(row["disponibilidade"]) > 0) else 0
+            })
+            
+    return {"features_data": features_data, "total_registros": len(features_data)}
+
+@app.get("/api/v1/ml/training-data")
+async def get_ml_training_data(current_user: dict = Depends(get_current_user)):
+    """
+    Retorna um dataset pronto para treinamento, assumindo que queremos prever o preço (Y) 
+    com base no rating e categoria (X).
+    """
+    rows = query_db("SELECT rating, preço, categoria FROM books_details")
+    training_set = []
+
+    for row in rows:
+        rating = safe_float(row["rating"])
+        preco = safe_float(row["preço"])
+        categoria = str(row["categoria"]).strip()
+        
+        # Garante que as variáveis X (rating) e Y (preço) são numéricas e válidas
+        if rating is not None and preco is not None and categoria:
+            training_set.append({
+                "X_rating": rating,
+                "X_categoria": categoria, # Categoria para One-Hot Encoding no cliente
+                "Y_preco": preco
+            })
+            
+    return {"training_data": training_set, "total_samples": len(training_set)}
+
+@app.post("/api/v1/ml/predictions")
+async def receive_predictions(
+    predictions_payload: List[Dict[str, Any]] = Body(..., description="Lista de objetos de predição, contendo features e o valor predito."),
+    current_user: dict = Depends(get_current_user)
+):
+    """
+    Endpoint de demonstração para receber e processar dados de predição.
+    Em um ambiente real, este endpoint faria validação, logging e salvaria as predições
+    em um banco de dados de resultados ou datalake.
+    """
+    
+    # 1. Validação simples do payload
+    if not isinstance(predictions_payload, list) or not all(isinstance(item, dict) for item in predictions_payload):
+        raise HTTPException(status_code=400, detail="O corpo deve ser uma lista de objetos JSON.")
+        
+    num_predictions = len(predictions_payload)
+    
+    # 2. Processamento/Simulação de Análise
+    predictions_received = []
+    for i, pred in enumerate(predictions_payload):
+        # Exemplo: Simular a verificação de quais predições têm preço alto
+        is_high_price = pred.get("predicted_price", 0) > 50.0 
+        
+        predictions_received.append({
+            "id": i + 1,
+            "success": True,
+            "input_data_sample": {k: v for k, v in pred.items() if k != 'metadata' and len(str(v)) < 50}, # Evita logs muito longos
+            "status_analysis": "Preço Predito Alto" if is_high_price else "Preço Predito Baixo"
+        })
+        
+    # 3. Retorno do resultado do processamento
+    return {
+        "message": f"Sucesso ao receber {num_predictions} predições.",
+        "analysis_summary": {
+            "total_recebido": num_predictions,
+            "total_alto_preco_simulado": sum(1 for p in predictions_received if p["status_analysis"] == "Preço Predito Alto")
+        },
+        "processed_predictions": predictions_received
+    }
