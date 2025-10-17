@@ -7,7 +7,7 @@ from auth import get_password_hash, verify_password, create_access_token, get_cu
 from jose import jwt
 from auth import SECRET_KEY, ALGORITHM 
 from typing import List, Dict, Any 
-
+import datetime
 
 app = FastAPI(
     title="API Tech Challenge",
@@ -287,8 +287,8 @@ async def get_ml_training_data():
 
     # 3. Processar cada linha e aplicar OHE
     for row in rows:
-        rating = safe_float(row["rating"])
-        preco = safe_float(row["preço"])
+        rating = float(row["rating"])
+        preco = float(row["preço"])
         categoria = str(row["categoria"]).strip()
         
         # Garante que as variáveis X (rating) e Y (preço) são numéricas e válidas
