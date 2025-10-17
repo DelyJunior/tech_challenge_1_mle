@@ -6,6 +6,8 @@ import sqlite3
 from auth import get_password_hash, verify_password, create_access_token, get_current_user
 from jose import jwt
 from auth import SECRET_KEY, ALGORITHM 
+from typing import List, Dict, Any 
+
 
 app = FastAPI(
     title="API Tech Challenge",
@@ -247,8 +249,8 @@ async def get_ml_features(current_user: dict = Depends(get_current_user)):
     features_data = []
     
     for row in rows:
-        rating = safe_float(row["rating"])
-        preco = safe_float(row["preço"])
+        rating = float(row["rating"])
+        preco = float(row["preço"])
         
         # Filtra apenas registros que tenham dados numéricos válidos para rating e preço
         if rating is not None and preco is not None:
@@ -273,8 +275,8 @@ async def get_ml_training_data(current_user: dict = Depends(get_current_user)):
     training_set = []
 
     for row in rows:
-        rating = safe_float(row["rating"])
-        preco = safe_float(row["preço"])
+        rating = float(row["rating"])
+        preco = float(row["preço"])
         categoria = str(row["categoria"]).strip()
         
         # Garante que as variáveis X (rating) e Y (preço) são numéricas e válidas
