@@ -240,7 +240,7 @@ async def books_price_range(min: float = Query(...), max: float = Query(...)):
     return {"livros_filtrados": livros_filtrados}
 
 @app.get("/api/v1/ml/features")
-async def get_ml_features(current_user: dict = Depends(get_current_user)):
+async def get_ml_features():
     """
     Retorna dados limpos e formatados para serem usados como features de um modelo ML.
     Filtra entradas onde rating ou preço não podem ser convertidos para float.
@@ -266,7 +266,7 @@ async def get_ml_features(current_user: dict = Depends(get_current_user)):
     return {"features_data": features_data, "total_registros": len(features_data)}
 
 @app.get("/api/v1/ml/training-data")
-async def get_ml_training_data(current_user: dict = Depends(get_current_user)):
+async def get_ml_training_data():
     """
     Retorna um dataset pronto para treinamento, assumindo que queremos prever o preço (Y) 
     com base no rating e categoria (X).
@@ -292,7 +292,6 @@ async def get_ml_training_data(current_user: dict = Depends(get_current_user)):
 @app.post("/api/v1/ml/predictions")
 async def receive_predictions(
     predictions_payload: List[Dict[str, Any]] = Body(..., description="Lista de objetos de predição, contendo features e o valor predito."),
-    current_user: dict = Depends(get_current_user)
 ):
     """
     Endpoint de demonstração para receber e processar dados de predição.
