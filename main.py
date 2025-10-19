@@ -9,12 +9,25 @@ from auth import SECRET_KEY, ALGORITHM
 from typing import List, Dict, Any 
 import datetime
 import json
+from Scraping import run_scraping
+import threading
 
 app = FastAPI(
     title="API Tech Challenge",
     version="1.0.0",
     description="Trabalho Fase 1"
 )
+
+# Rotas públicas
+@app.get("/")
+async def home():
+    return {"message": "Hello, FastAPI!"}
+
+@app.get("/api/v1/scraping/trigger")
+def trigger_scraping():
+    thread = threading.Thread(target=run_scraping)
+    thread.start()
+    return {"status": "Execução do scraping iniciada em background"}
 
 # Caminho do banco de dados
 DB_FILE = os.path.join(os.path.dirname(__file__), "data", "challenge1.sqlite")
@@ -32,10 +45,7 @@ def query_db(query: str, params: tuple = (), fetchone=False):
         return dict(rows[0]) if rows else None
     return [dict(row) for row in rows]
 
-# Rotas públicas
-@app.get("/")
-async def home():
-    return {"message": "Hello, FastAPI!"}
+
 
 # Criar usuário (hash de senha incluso)
 @app.post("/add_user")
