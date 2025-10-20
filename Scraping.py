@@ -1,26 +1,13 @@
-from nbclient import NotebookClient
-from nbformat import read
-import threading
-import traceback
+import subprocess
 
 def run_scraping():
-    notebook_path = "notebooks/bookstoscrape_Scraper.ipynb"
-    print("Iniciando execução do notebook de scraping...")
+    script_path = "notebooks/bookstoscrape.py"
+    print("Iniciando execução do script de scraping...")
 
     try:
-        # Abre o notebook
-        with open(notebook_path, "r", encoding="utf-8") as f:
-            nb = read(f, as_version=4)
-
-        # Cria o client para executar o notebook
-        client = NotebookClient(nb, timeout=3600, kernel_name="python3")
-
-        # Executa o notebook
-        client.execute()
-
-        print("✅ Notebook executado com sucesso!")
-
+        result = subprocess.run(["python", script_path], capture_output=True, text=True)
+        print(result.stdout)
+        print("✅ Script executado com sucesso!")
     except Exception as e:
-        print("❌ Erro ao executar o notebook:")
-        traceback.print_exc()
-
+        print("❌ Erro ao executar o script:")
+        print(e)
