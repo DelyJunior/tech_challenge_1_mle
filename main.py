@@ -135,9 +135,8 @@ def refresh_token(authorization: str = Header(...)):
 
 @app.get("/api/v1/scraping/trigger")
 def trigger_scraping():
-    thread = threading.Thread(target=run_scraping)
-    thread.start()  # roda em background
-    return {"status": "Execução do scraping iniciada em background"}
+    subprocess.Popen(["python", "notebooks/bookstoscrape.py"])
+    return {"status": "Scraping iniciado em background"}
 
 # Rotas protegidas
 @app.get("/api/v1/books")
