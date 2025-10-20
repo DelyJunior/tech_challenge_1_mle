@@ -23,11 +23,7 @@ app = FastAPI(
 async def home():
     return {"message": "Hello, FastAPI!"}
 
-@app.get("/api/v1/scraping/trigger")
-def trigger_scraping():
-    thread = threading.Thread(target=run_scraping)
-    thread.start()
-    return {"status": "Execução do scraping iniciada em background"}
+
 
 # Caminho do banco de dados
 DB_FILE = os.path.join(os.path.dirname(__file__), "data", "challenge1.sqlite")
@@ -119,6 +115,13 @@ def refresh_token(authorization: str = Header(...)):
     # Gera um novo token
     new_token = create_access_token(data={"sub": username})
     return {"access_token": new_token, "token_type": "bearer"}
+
+
+@app.get("/api/v1/scraping/trigger")
+def trigger_scraping():
+    thread = threading.Thread(target=run_scraping)
+    thread.start()
+    return {"status": "Execução do scraping iniciada em background"}
 
 # Rotas protegidas
 @app.get("/api/v1/books")

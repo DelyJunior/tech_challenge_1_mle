@@ -13,7 +13,7 @@ def run_scraping():
             nb = read(f, as_version=4)
 
         # Cria o client para executar o notebook
-        client = NotebookClient(nb, timeout=3600, kernel_name="venv")
+        client = NotebookClient(nb, timeout=3600, kernel_name="python3")
 
         # Executa o notebook
         client.execute()
