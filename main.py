@@ -9,7 +9,6 @@ from auth import SECRET_KEY, ALGORITHM
 from typing import List, Dict, Any 
 import datetime
 import json
-from Scraping import run_scraping
 import threading
 import subprocess
 
