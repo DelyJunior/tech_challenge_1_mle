@@ -11,12 +11,30 @@ import datetime
 import json
 from Scraping import run_scraping
 import threading
+import subprocess
 
 app = FastAPI(
     title="API Tech Challenge",
     version="1.0.0",
     description="Trabalho Fase 1"
 )
+
+
+def run_scraping():
+    script_path = "notebooks/bookstoscrape.py"
+    print("Iniciando execução do script de scraping...")
+
+    try:
+        result = subprocess.run(["python", script_path], capture_output=True, text=True)
+        print(result.stdout)
+        print("Script executado com sucesso!")
+    except Exception as e:
+        print("Erro ao executar o script:")
+        print(e)
+
+
+
+
 
 # Rotas públicas
 @app.get("/")
@@ -116,11 +134,10 @@ def refresh_token(authorization: str = Header(...)):
     new_token = create_access_token(data={"sub": username})
     return {"access_token": new_token, "token_type": "bearer"}
 
-
 @app.get("/api/v1/scraping/trigger")
 def trigger_scraping():
     thread = threading.Thread(target=run_scraping)
-    thread.start()
+    thread.start()  # roda em background
     return {"status": "Execução do scraping iniciada em background"}
 
 # Rotas protegidas
