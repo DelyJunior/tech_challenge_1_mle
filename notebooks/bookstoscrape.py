@@ -6,34 +6,37 @@ import sqlite3
 import tempfile
 import pandas as pd
 from tqdm import tqdm
-from fuzzywuzzy import fuzz
 from selenium import webdriver
 from selenium.webdriver.common.by import By
 from selenium.webdriver.chrome.service import Service
 from selenium.webdriver.chrome.options import Options
 from selenium.common.exceptions import NoSuchElementException
-from webdriver_manager.chrome import ChromeDriverManager
 
 warnings.filterwarnings("ignore")
 
 # =============================
-# CONFIGURAÇÕES DO CHROME
+# CONFIGURAÇÕES DO CHROME (Render)
 # =============================
+CHROME_PATH = os.getenv("GOOGLE_CHROME_BIN", "/usr/bin/chromium")
+CHROMEDRIVER_PATH = os.getenv("CHROMEDRIVER_PATH", "/usr/bin/chromedriver")
+
 chrome_options = Options()
-chrome_options.add_argument("--headless")  # executa sem interface
+chrome_options.add_argument("--headless=new")
 chrome_options.add_argument("--no-sandbox")
 chrome_options.add_argument("--disable-dev-shm-usage")
 chrome_options.add_argument("--disable-gpu")
 chrome_options.add_argument("--disable-extensions")
 chrome_options.add_argument("--remote-debugging-port=9222")
 chrome_options.add_argument("--window-size=1920,1080")
+chrome_options.binary_location = CHROME_PATH
 
-# Cria um diretório temporário exclusivo para o perfil do Chrome
+# Diretório temporário isolado para o perfil do Chrome
 user_data_dir = tempfile.mkdtemp()
 chrome_options.add_argument(f"--user-data-dir={user_data_dir}")
 
-# Inicializa o driver automaticamente (baixa se necessário)
-driver = webdriver.Chrome(service=Service(ChromeDriverManager().install()), options=chrome_options)
+# Inicializa o Chrome driver (usando os caminhos do Render)
+service = Service(CHROMEDRIVER_PATH)
+driver = webdriver.Chrome(service=service, options=chrome_options)
 
 # =============================
 # INÍCIO DO SCRAPING
@@ -58,12 +61,11 @@ while True:
             print(f"Erro ao extrair link: {e}")
             continue
 
-    # Tenta clicar no botão "Next"
     try:
         next_button = driver.find_element(By.CLASS_NAME, "next")
         next_button.find_element(By.TAG_NAME, "a").click()
         page_count += 1
-        time.sleep(2)
+        time.sleep(1)
     except NoSuchElementException:
         print("Última página alcançada. Fim da coleta de links.")
         break
@@ -76,7 +78,7 @@ all_books_details = []
 
 for url in tqdm(all_book_links, desc="Extraindo detalhes dos livros"):
     driver.get(url)
-    time.sleep(1)
+    time.sleep(0.8)
     try:
         title = driver.find_element(By.TAG_NAME, "h1").text
         price = driver.find_element(By.CLASS_NAME, "price_color").text
@@ -115,17 +117,16 @@ print("Scraping concluído!")
 # =============================
 df = pd.DataFrame(all_books_details)
 
-# Garante o diretório data
-notebook_dir = os.getcwd()
-data_dir = os.path.join(notebook_dir, "..", "data")
+# Diretório data
+data_dir = os.path.join(os.getcwd(), "data")
 os.makedirs(data_dir, exist_ok=True)
 
-# Salva CSV
+# CSV
 csv_path = os.path.join(data_dir, "books_details.csv")
 df.to_csv(csv_path, index=False)
 print(f"CSV salvo em: {os.path.abspath(csv_path)}")
 
-# Salva no banco SQLite
+# Banco SQLite
 db_path = os.path.join(data_dir, "challenge1.sqlite")
 conn = sqlite3.connect(db_path)
 df.to_sql("books_details", conn, if_exists="replace", index=False)
