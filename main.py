@@ -121,9 +121,12 @@ def refresh_token(authorization: str = Header(...)):
     return {"access_token": new_token, "token_type": "bearer"}
 
 @app.get("/api/v1/scraping/trigger")
-def trigger_scraping():
+def trigger_scraping(current_user: dict = Depends(get_current_user)):
     subprocess.Popen(["python", "notebooks/bookstoscrape.py"])
-    return {"status": "Scraping iniciado em background"}
+    return {
+        "status": "Scraping iniciado em background",
+        "usuario": current_user["username"]  # ou o campo que você tiver
+    }
 
 # Rotas protegidas
 @app.get("/api/v1/books")
