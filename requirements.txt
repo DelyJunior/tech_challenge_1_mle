@@ -17,4 +17,6 @@ tqdm==4.67.1
 scikit-learn==1.5.2
 aiohttp==3.10.10
 ansicolors==1.1.8
-
+beautifulsoup4==4.12.2
+python-Levenshtein==0.21.2
+requests==2.31.0

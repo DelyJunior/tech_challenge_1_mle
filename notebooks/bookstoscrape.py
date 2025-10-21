@@ -1,92 +1,35 @@
 import os
-import time
 import re
-import warnings
 import sqlite3
-import tempfile
 import pandas as pd
+import requests
+from bs4 import BeautifulSoup
 from tqdm import tqdm
-from selenium import webdriver
-from selenium.webdriver.common.by import By
-from selenium.webdriver.chrome.service import Service
-from selenium.webdriver.chrome.options import Options
-from selenium.common.exceptions import NoSuchElementException
-
-warnings.filterwarnings("ignore")
-
-# =============================
-# CONFIGURAÇÕES DO CHROME (Render)
-# =============================
-# Detecta automaticamente onde o Chrome e o Chromedriver estão instalados
-possible_chrome_paths = [
-    "/usr/bin/chromium",
-    "/usr/bin/chromium-browser",
-    "/usr/lib/chromium/chrome",
-]
-possible_driver_paths = [
-    "/usr/bin/chromedriver",
-    "/usr/lib/chromium-browser/chromedriver",
-    "/usr/lib/chromium/chromedriver",
-]
-
-CHROME_PATH = next((p for p in possible_chrome_paths if os.path.exists(p)), None)
-CHROMEDRIVER_PATH = next((p for p in possible_driver_paths if os.path.exists(p)), None)
-
-if not CHROME_PATH or not CHROMEDRIVER_PATH:
-    raise FileNotFoundError(f"Chrome ou ChromeDriver não encontrados.\n"
-                            f"Chrome: {CHROME_PATH}\nDriver: {CHROMEDRIVER_PATH}")
-
-print(f"Chrome: {CHROME_PATH}")
-print(f"ChromeDriver: {CHROMEDRIVER_PATH}")
-
-
-chrome_options = Options()
-chrome_options.add_argument("--headless=new")
-chrome_options.add_argument("--no-sandbox")
-chrome_options.add_argument("--disable-dev-shm-usage")
-chrome_options.add_argument("--disable-gpu")
-chrome_options.add_argument("--disable-extensions")
-chrome_options.add_argument("--remote-debugging-port=9222")
-chrome_options.add_argument("--window-size=1920,1080")
-chrome_options.binary_location = CHROME_PATH
-
-# Diretório temporário isolado para o perfil do Chrome
-user_data_dir = tempfile.mkdtemp()
-chrome_options.add_argument(f"--user-data-dir={user_data_dir}")
-
-# Inicializa o Chrome driver (usando os caminhos do Render)
-service = Service(CHROMEDRIVER_PATH)
-driver = webdriver.Chrome(service=service, options=chrome_options)
 
 # =============================
 # INÍCIO DO SCRAPING
 # =============================
-print("🚀 Iniciando scraping...")
-start_url = "https://books.toscrape.com/"
-driver.get(start_url)
+print("Iniciando scraping (sem navegador)...")
+BASE_URL = "https://books.toscrape.com/"
 
 all_book_links = []
-page_count = 1
+page_url = BASE_URL
 
 while True:
-    print(f"Coletando links da página {page_count}...")
-    books = driver.find_elements(By.CLASS_NAME, "product_pod")
+    print(f"Coletando links da página {page_url}...")
+    resp = requests.get(page_url)
+    soup = BeautifulSoup(resp.text, "html.parser")
 
+    books = soup.select("article.product_pod h3 a")
     for book in books:
-        try:
-            link_element = book.find_element(By.TAG_NAME, "h3").find_element(By.TAG_NAME, "a")
-            link = link_element.get_attribute("href")
-            all_book_links.append(link)
-        except Exception as e:
-            print(f"Erro ao extrair link: {e}")
-            continue
+        link = book.get("href")
+        all_book_links.append(BASE_URL + link.replace("../", ""))
 
-    try:
-        next_button = driver.find_element(By.CLASS_NAME, "next")
-        next_button.find_element(By.TAG_NAME, "a").click()
-        page_count += 1
-        time.sleep(1)
-    except NoSuchElementException:
+    next_btn = soup.select_one("li.next a")
+    if next_btn:
+        next_page = next_btn.get("href")
+        page_url = BASE_URL + "catalogue/" + next_page
+    else:
         print("Última página alcançada. Fim da coleta de links.")
         break
 
@@ -97,39 +40,34 @@ rating_map = {"One": 1.0, "Two": 2.0, "Three": 3.0, "Four": 4.0, "Five": 5.0}
 all_books_details = []
 
 for url in tqdm(all_book_links, desc="Extraindo detalhes dos livros"):
-    driver.get(url)
-    time.sleep(0.8)
-    try:
-        title = driver.find_element(By.TAG_NAME, "h1").text
-        price = driver.find_element(By.CLASS_NAME, "price_color").text
-        price_float = float(price.replace("£", "")) if price else 0.0
+    resp = requests.get(url)
+    soup = BeautifulSoup(resp.text, "html.parser")
 
-        availability = driver.find_element(By.CLASS_NAME, "instock.availability").text
-        match = re.search(r'\d+', availability)
-        availability_int = int(match.group(0)) if match else 0
+    title = soup.find("h1").text.strip()
+    price_text = soup.select_one("p.price_color").text.strip()
+    price_float = float(price_text.replace("£", ""))
 
-        rating_element = driver.find_element(By.CSS_SELECTOR, "p.star-rating")
-        rating = rating_element.get_attribute("class").replace("star-rating ", "")
-        rating_float = rating_map.get(rating, 0.0)
+    availability_text = soup.select_one("p.instock.availability").text
+    match = re.search(r'\d+', availability_text)
+    availability_int = int(match.group(0)) if match else 0
 
-        category = driver.find_element(By.XPATH, "//ul[@class='breadcrumb']/li[3]/a").text
-        image_relative_url = driver.find_element(By.CSS_SELECTOR, "div.item.active img").get_attribute("src")
-        image_url = image_relative_url.replace("../..", "https://books.toscrape.com")
+    rating_class = soup.select_one("p.star-rating").get("class")[1]
+    rating_float = rating_map.get(rating_class, 0.0)
 
-        all_books_details.append({
-            "titulo": title,
-            "preco": price_float,
-            "rating": rating_float,
-            "disponibilidade": availability_int,
-            "categoria": category,
-            "imagem": image_url,
-            "url_livro": url
-        })
-    except Exception as e:
-        print(f"Erro ao extrair {url}: {e}")
-        continue
+    category = soup.select("ul.breadcrumb li a")[2].text.strip()
+    image_relative_url = soup.select_one("div.item.active img")["src"]
+    image_url = BASE_URL + image_relative_url.replace("../", "")
 
-driver.quit()
+    all_books_details.append({
+        "titulo": title,
+        "preco": price_float,
+        "rating": rating_float,
+        "disponibilidade": availability_int,
+        "categoria": category,
+        "imagem": image_url,
+        "url_livro": url
+    })
+
 print("Scraping concluído!")
 
 # =============================
@@ -137,7 +75,6 @@ print("Scraping concluído!")
 # =============================
 df = pd.DataFrame(all_books_details)
 
-# Diretório data
 data_dir = os.path.join(os.getcwd(), "data")
 os.makedirs(data_dir, exist_ok=True)
 
