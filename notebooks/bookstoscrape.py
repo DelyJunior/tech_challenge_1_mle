@@ -18,6 +18,7 @@ page_url = BASE_URL
 while True:
     print(f"Coletando links da página {page_url}...")
     resp = requests.get(page_url)
+    resp.encoding = 'utf-8'  # garante o encoding correto
     soup = BeautifulSoup(resp.text, "html.parser")
 
     books = soup.select("article.product_pod h3 a")
@@ -28,7 +29,12 @@ while True:
     next_btn = soup.select_one("li.next a")
     if next_btn:
         next_page = next_btn.get("href")
-        page_url = BASE_URL + "catalogue/" + next_page
+        # Ajusta URL para as próximas páginas
+        if "catalogue/" not in page_url:
+            page_url = BASE_URL + "catalogue/" + next_page
+        else:
+            base_part = "/".join(page_url.split("/")[:-1])
+            page_url = base_part + "/" + next_page
     else:
         print("Última página alcançada. Fim da coleta de links.")
         break
@@ -41,32 +47,38 @@ all_books_details = []
 
 for url in tqdm(all_book_links, desc="Extraindo detalhes dos livros"):
     resp = requests.get(url)
+    resp.encoding = 'utf-8'
     soup = BeautifulSoup(resp.text, "html.parser")
 
-    title = soup.find("h1").text.strip()
-    price_text = soup.select_one("p.price_color").text.strip()
-    price_float = float(price_text.replace("£", ""))
+    try:
+        title = soup.find("h1").text.strip()
 
-    availability_text = soup.select_one("p.instock.availability").text
-    match = re.search(r'\d+', availability_text)
-    availability_int = int(match.group(0)) if match else 0
+        price_text = soup.select_one("p.price_color").text.strip()
+        price_float = float(re.sub(r"[^\d.]", "", price_text))  # remove caracteres estranhos
 
-    rating_class = soup.select_one("p.star-rating").get("class")[1]
-    rating_float = rating_map.get(rating_class, 0.0)
+        availability_text = soup.select_one("p.instock.availability").text
+        match = re.search(r'\d+', availability_text)
+        availability_int = int(match.group(0)) if match else 0
 
-    category = soup.select("ul.breadcrumb li a")[2].text.strip()
-    image_relative_url = soup.select_one("div.item.active img")["src"]
-    image_url = BASE_URL + image_relative_url.replace("../", "")
+        rating_class = soup.select_one("p.star-rating").get("class")[1]
+        rating_float = rating_map.get(rating_class, 0.0)
 
-    all_books_details.append({
-        "titulo": title,
-        "preco": price_float,
-        "rating": rating_float,
-        "disponibilidade": availability_int,
-        "categoria": category,
-        "imagem": image_url,
-        "url_livro": url
-    })
+        category = soup.select("ul.breadcrumb li a")[2].text.strip()
+        image_relative_url = soup.select_one("div.item.active img")["src"]
+        image_url = BASE_URL + image_relative_url.replace("../", "")
+
+        all_books_details.append({
+            "titulo": title,
+            "preco": price_float,
+            "rating": rating_float,
+            "disponibilidade": availability_int,
+            "categoria": category,
+            "imagem": image_url,
+            "url_livro": url
+        })
+    except Exception as e:
+        print(f"Erro ao extrair {url}: {e}")
+        continue
 
 print("Scraping concluído!")
 
