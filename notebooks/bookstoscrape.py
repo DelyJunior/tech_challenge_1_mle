@@ -17,8 +17,28 @@ warnings.filterwarnings("ignore")
 # =============================
 # CONFIGURAÇÕES DO CHROME (Render)
 # =============================
-CHROME_PATH = os.getenv("GOOGLE_CHROME_BIN", "/usr/bin/chromium")
-CHROMEDRIVER_PATH = os.getenv("CHROMEDRIVER_PATH", "/usr/bin/chromedriver")
+# Detecta automaticamente onde o Chrome e o Chromedriver estão instalados
+possible_chrome_paths = [
+    "/usr/bin/chromium",
+    "/usr/bin/chromium-browser",
+    "/usr/lib/chromium/chrome",
+]
+possible_driver_paths = [
+    "/usr/bin/chromedriver",
+    "/usr/lib/chromium-browser/chromedriver",
+    "/usr/lib/chromium/chromedriver",
+]
+
+CHROME_PATH = next((p for p in possible_chrome_paths if os.path.exists(p)), None)
+CHROMEDRIVER_PATH = next((p for p in possible_driver_paths if os.path.exists(p)), None)
+
+if not CHROME_PATH or not CHROMEDRIVER_PATH:
+    raise FileNotFoundError(f"Chrome ou ChromeDriver não encontrados.\n"
+                            f"Chrome: {CHROME_PATH}\nDriver: {CHROMEDRIVER_PATH}")
+
+print(f"Chrome: {CHROME_PATH}")
+print(f"ChromeDriver: {CHROMEDRIVER_PATH}")
+
 
 chrome_options = Options()
 chrome_options.add_argument("--headless=new")
