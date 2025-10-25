@@ -459,7 +459,7 @@ async def receive_predictions(
             "status": "partial_success"
         }
     
-@app.get("/api/v1/ml/predictions")
+@app.get("/api/v1/ml/get-predictions")
 async def get_predictions():
     """
     Retorna as predições de preços armazenadas no banco de dados.
