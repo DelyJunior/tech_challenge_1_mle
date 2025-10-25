@@ -20,3 +20,5 @@ ansicolors==1.1.8
 beautifulsoup4==4.12.2
 python-Levenshtein==0.27.1
 requests==2.31.0
+streamlit==1.39.0
+
