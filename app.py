@@ -3,7 +3,7 @@ import requests
 
 st.set_page_config(page_title="Meu App com API", layout="wide")
 
-st.title("🔗 Integração com API - Tech Challenge")
+st.title("Integração com API - Tech Challenge")
 
 # Endpoint base
 API_URL = "https://tech-challenge-1-mle.onrender.com/"
@@ -21,7 +21,7 @@ if st.button("Testar API"):
         st.error(f"Erro ao conectar: {e}")
 
 # Campo para testar rota personalizada
-rota = st.text_input("Digite o caminho da rota (ex: /api/v1/books)")
+rota = st.text_input("Digite o caminho da rota (ex: /api/v1/books). Adicionar apenas os endpoints")
 if rota:
     try:
         response = requests.get(API_URL.rstrip("/") + rota)
