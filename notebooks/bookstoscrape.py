@@ -1,71 +1,95 @@
 import os
 import re
 import sqlite3
+import time
 import pandas as pd
 import requests
 from bs4 import BeautifulSoup
 from tqdm import tqdm
+from urllib.parse import urljoin
 
 # =============================
-# INÍCIO DO SCRAPING
+# CONFIGURAÇÕES INICIAIS
 # =============================
-print("Iniciando scraping (sem navegador)...")
 BASE_URL = "https://books.toscrape.com/"
+HEADERS = {"User-Agent": "Mozilla/5.0"}
+DELAY = 1.0  # segundos entre as requisições
 
 all_book_links = []
 page_url = BASE_URL
+page_count = 1
 
+print("Iniciando scraping de livros...")
+print("=" * 60)
+
+# =============================
+# PAGINAÇÃO
+# =============================
 while True:
-    print(f"Coletando links da página {page_url}...")
-    resp = requests.get(page_url)
-    resp.encoding = 'utf-8'  # garante o encoding correto
+    print(f"Coletando links da página {page_count}: {page_url}")
+    resp = requests.get(page_url, headers=HEADERS)
+    resp.encoding = "utf-8"
     soup = BeautifulSoup(resp.text, "html.parser")
 
     books = soup.select("article.product_pod h3 a")
     for book in books:
         link = book.get("href")
-        all_book_links.append(BASE_URL + link.replace("../", ""))
+        book_url = urljoin(page_url, link)
+        all_book_links.append(book_url)
 
     next_btn = soup.select_one("li.next a")
     if next_btn:
         next_page = next_btn.get("href")
-        # Ajusta URL para as próximas páginas
-        if "catalogue/" not in page_url:
-            page_url = BASE_URL + "catalogue/" + next_page
-        else:
-            base_part = "/".join(page_url.split("/")[:-1])
-            page_url = base_part + "/" + next_page
+        page_url = urljoin(page_url, next_page)
+        page_count += 1
+        time.sleep(DELAY)
     else:
         print("Última página alcançada. Fim da coleta de links.")
         break
 
+print(f"Total de links coletados: {len(all_book_links)} livros encontrados.")
+print("=" * 60)
+
 # =============================
-# COLETA DE DETALHES
+# EXTRAÇÃO DE DETALHES
 # =============================
 rating_map = {"One": 1.0, "Two": 2.0, "Three": 3.0, "Four": 4.0, "Five": 5.0}
 all_books_details = []
 
-for url in tqdm(all_book_links, desc="Extraindo detalhes dos livros"):
-    resp = requests.get(url)
-    resp.encoding = 'utf-8'
-    soup = BeautifulSoup(resp.text, "html.parser")
-
+print("Extraindo detalhes dos livros...")
+for url in tqdm(all_book_links, desc="Extraindo detalhes"):
     try:
-        title = soup.find("h1").text.strip()
+        resp = requests.get(url, headers=HEADERS)
+        resp.encoding = "utf-8"
+        soup = BeautifulSoup(resp.text, "html.parser")
 
-        price_text = soup.select_one("p.price_color").text.strip()
-        price_float = float(re.sub(r"[^\d.]", "", price_text))  # remove caracteres estranhos
+        # Título
+        title_tag = soup.find("h1")
+        title = title_tag.text.strip() if title_tag else "N/A"
 
-        availability_text = soup.select_one("p.instock.availability").text
-        match = re.search(r'\d+', availability_text)
+        # Preço
+        price_tag = soup.select_one("p.price_color")
+        price_text = price_tag.text.strip() if price_tag else "0.0"
+        price_float = float(re.sub(r"[^\d.]", "", price_text))
+
+        # Disponibilidade
+        avail_tag = soup.select_one("p.instock.availability")
+        availability_text = avail_tag.text if avail_tag else "0"
+        match = re.search(r"\d+", availability_text)
         availability_int = int(match.group(0)) if match else 0
 
-        rating_class = soup.select_one("p.star-rating").get("class")[1]
+        # Rating
+        rating_tag = soup.select_one("p.star-rating")
+        rating_class = rating_tag.get("class")[1] if rating_tag else "Zero"
         rating_float = rating_map.get(rating_class, 0.0)
 
-        category = soup.select("ul.breadcrumb li a")[2].text.strip()
-        image_relative_url = soup.select_one("div.item.active img")["src"]
-        image_url = BASE_URL + image_relative_url.replace("../", "")
+        # Categoria
+        category_tag = soup.select("ul.breadcrumb li a")
+        category = category_tag[2].text.strip() if len(category_tag) > 2 else "N/A"
+
+        # Imagem
+        image_tag = soup.select_one("div.item.active img")
+        image_url = urljoin(BASE_URL, image_tag["src"]) if image_tag else ""
 
         all_books_details.append({
             "titulo": title,
@@ -76,6 +100,8 @@ for url in tqdm(all_book_links, desc="Extraindo detalhes dos livros"):
             "imagem": image_url,
             "url_livro": url
         })
+
+        time.sleep(0.3)  # delay pequeno para não sobrecarregar o servidor
     except Exception as e:
         print(f"Erro ao extrair {url}: {e}")
         continue
@@ -83,7 +109,7 @@ for url in tqdm(all_book_links, desc="Extraindo detalhes dos livros"):
 print("Scraping concluído!")
 
 # =============================
-# SALVAR DADOS
+# SALVAR RESULTADOS
 # =============================
 df = pd.DataFrame(all_books_details)
 
@@ -101,3 +127,6 @@ conn = sqlite3.connect(db_path)
 df.to_sql("books_details", conn, if_exists="replace", index=False)
 conn.close()
 print(f"Banco salvo em: {os.path.abspath(db_path)}")
+
+print("=" * 60)
+print(f"Processo finalizado com {len(df)} livros extraídos em {page_count} páginas!")

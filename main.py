@@ -178,11 +178,11 @@ async def health_check():
 @app.get("/api/v1/stats/overview")
 async def stats_overview():
     total_livros = query_db("SELECT COUNT(*) as total FROM books_details", fetchone=True)["total"]
-    precos_raw = query_db("SELECT preço FROM books_details WHERE preço IS NOT NULL AND preço != ''")
+    precos_raw = query_db("SELECT preco FROM books_details WHERE preco IS NOT NULL AND preco != ''")
     precos = []
     for row in precos_raw:
         try:
-            precos.append(float(row["preço"]))
+            precos.append(float(row["preco"]))
         except:
             continue
     preco_medio = round(sum(precos) / len(precos), 2) if precos else 0
@@ -201,12 +201,12 @@ async def stats_overview():
 # Estatísticas por categoria
 @app.get("/api/v1/stats/categories")
 async def stats_categories():
-    rows = query_db("SELECT categoria, preço FROM books_details WHERE categoria IS NOT NULL AND categoria != ''")
+    rows = query_db("SELECT categoria, preco FROM books_details WHERE categoria IS NOT NULL AND categoria != ''")
     categorias = {}
     for row in rows:
         categoria = str(row["categoria"]).strip()
         try:
-            preco = float(row["preço"])
+            preco = float(row["preco"])
         except (ValueError, TypeError):
             preco = None
         if categoria not in categorias:
@@ -239,21 +239,21 @@ async def top_rated_books(limit: int = 10):
     livros = query_db("SELECT titulo, categoria, rating FROM books_details WHERE rating = 5")
     return {"top_rated_books": livros[:limit]}
 
-# Faixa de preço
+# Faixa de preco
 @app.get("/api/v1/books/price-range")
 async def books_price_range(min: float = Query(...), max: float = Query(...)):
-    rows = query_db("SELECT titulo, categoria, preço, disponibilidade FROM books_details WHERE preço IS NOT NULL AND preço != ''")
+    rows = query_db("SELECT titulo, categoria, preco, disponibilidade FROM books_details WHERE preco IS NOT NULL AND preco != ''")
     livros_filtrados = []
     for row in rows:
         try:
-            preco = float(row["preço"])
+            preco = float(row["preco"])
         except (ValueError, TypeError):
             continue
         if min <= preco <= max:
             livros_filtrados.append({
                 "titulo": row["titulo"].strip(),
                 "categoria": row["categoria"].strip(),
-                "preço": preco,
+                "preco": preco,
                 "disponibilidade": str(row["disponibilidade"]).strip() if row["disponibilidade"] else ""
             })
     return {"livros_filtrados": livros_filtrados}
@@ -262,17 +262,17 @@ async def books_price_range(min: float = Query(...), max: float = Query(...)):
 async def get_ml_features():
     """
     Retorna dados limpos e formatados para serem usados como features de um modelo ML.
-    Filtra entradas onde rating ou preço não podem ser convertidos para float.
+    Filtra entradas onde rating ou preco não podem ser convertidos para float.
     """
-    rows = query_db("SELECT titulo, rating, preço, categoria, disponibilidade FROM books_details")
+    rows = query_db("SELECT titulo, rating, preco, categoria, disponibilidade FROM books_details")
     features_data = []
     
     for row in rows:
         rating = float(row["rating"])
-        preco = float(row["preço"])
+        preco = float(row["preco"])
         disponibilidade = row["disponibilidade"]
 
-        # Filtra apenas registros que tenham dados numéricos válidos para rating e preço
+        # Filtra apenas registros que tenham dados numéricos válidos para rating e preco
         if rating is not None and preco is not None:
             features_data.append({
                 "titulo": str(row["titulo"]).strip(),
@@ -302,16 +302,16 @@ async def get_ml_training_data():
     num_categories = len(unique_categories)
     
     # 2. Obter os dados brutos
-    rows = query_db("SELECT rating, preço, categoria FROM books_details")
+    rows = query_db("SELECT rating, preco, categoria FROM books_details")
     training_set = []
 
     # 3. Processar cada linha e aplicar OHE
     for row in rows:
         rating = float(row["rating"])
-        preco = float(row["preço"])
+        preco = float(row["preco"])
         categoria = str(row["categoria"]).strip()
         
-        # Garante que as variáveis X (rating) e Y (preço) são numéricas e válidas
+        # Garante que as variáveis X (rating) e Y (preco) são numéricas e válidas
         if rating is not None and preco is not None and categoria:
             
             # Inicializa o vetor OHE com zeros
