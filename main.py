@@ -25,6 +25,9 @@ app = FastAPI(
 # Rotas públicas
 @app.get("/")
 async def home():
+    """
+    Endpoint inicial para verificar se a API está no ar.
+    """    
     return {"message": "Hello, FastAPI!"}
 
 
@@ -50,6 +53,9 @@ def query_db(query: str, params: tuple = (), fetchone=False):
 # Criar usuário (hash de senha incluso)
 @app.post("/add_user")
 def add_user(user: dict = Body(...)):
+    """
+    Cria um novo usuário e armazena a senha com hash no banco de dados.
+    """    
     username = user.get("username")
     password = user.get("password")
     
@@ -83,6 +89,9 @@ def add_user(user: dict = Body(...)):
 # Login e geração de token
 @app.post("/api/v1/auth/login")
 def login_for_access_token(form_data: OAuth2PasswordRequestForm = Depends()):
+    """
+    Autentica o usuário com username e senha e retorna um token JWT para acesso às rotas protegidas.
+    """    
     user = query_db("SELECT * FROM users WHERE username = ?", (form_data.username,), fetchone=True)
     if not user or not verify_password(form_data.password, user["password"]):
         raise HTTPException(
@@ -122,6 +131,10 @@ def refresh_token(authorization: str = Header(...)):
 
 @app.get("/api/v1/scraping/trigger")
 def trigger_scraping(current_user: dict = Depends(get_current_user)):
+    """
+    Dispara o script de scraping de livros em background.
+    Requer autenticação JWT.
+    """    
     subprocess.Popen(["python", "notebooks/bookstoscrape.py"])
     return {
         "status": "Scraping iniciado em background",
@@ -131,11 +144,17 @@ def trigger_scraping(current_user: dict = Depends(get_current_user)):
 # Rotas protegidas
 @app.get("/api/v1/books")
 async def get_books():
+    """
+    Retorna uma lista de títulos dos livros que possuem disponibilidade maior que zero.
+    """    
     livros = query_db("SELECT titulo FROM books_details WHERE disponibilidade > 0")
     return {"livros_disponiveis": livros}
 
 @app.get("/api/v1/books/{id:int}")
 async def get_book(id: int):
+    """
+    Retorna os detalhes de um livro específico através do seu ID (rowid no banco de dados).
+    """    
     result = query_db("SELECT rowid as ID, * FROM books_details WHERE rowid = ?", (id,), fetchone=True)
     if not result:
         return {"error": "Livro não encontrado"}
@@ -146,6 +165,10 @@ async def search_books(
     title: str = Query(None, description="Título ou parte do título do livro"),
     category: str = Query(None, description="Categoria ou parte da categoria")
 ):
+    """
+    Permite a busca de livros por título e/ou categoria, retornando ID, título, categoria e disponibilidade.
+    """
+    
     query = "SELECT rowid as ID, titulo, categoria, disponibilidade FROM books_details WHERE 1=1"
     params = []
 
@@ -161,11 +184,18 @@ async def search_books(
 
 @app.get("/api/v1/categories")
 async def get_categories():
+    """
+    Retorna uma lista das categorias únicas dos livros disponíveis (disponibilidade > 0).
+    """    
     categorias = query_db("SELECT DISTINCT categoria FROM books_details WHERE disponibilidade > 0")
     return {"Categorias_disponiveis": categorias}
 
 @app.get("/api/v1/health")
 async def health_check():
+    """
+    Verifica a saúde da API e a conectividade com o banco de dados.
+    Retorna o status e o total de livros no BD.
+    """    
     if not os.path.exists(DB_FILE):
         return {"status": "error", "detail": "Banco de dados não encontrado"}
     try:
@@ -177,6 +207,9 @@ async def health_check():
 # Estatísticas gerais
 @app.get("/api/v1/stats/overview")
 async def stats_overview():
+    """
+    Retorna estatísticas gerais sobre os dados, incluindo total de livros, preço médio e distribuição de ratings.
+    """    
     total_livros = query_db("SELECT COUNT(*) as total FROM books_details", fetchone=True)["total"]
     precos_raw = query_db("SELECT preco FROM books_details WHERE preco IS NOT NULL AND preco != ''")
     precos = []
@@ -201,7 +234,7 @@ async def stats_overview():
 # Estatísticas por categoria
 @app.get("/api/v1/stats/categories")
 async def stats_categories():
-    rows = query_db("SELECT categoria, preco FROM books_details WHERE categoria IS NOT NULL AND categoria != ''")
+    rows = query_db("SELECT categoria, preço FROM books_details WHERE categoria IS NOT NULL AND categoria != ''")
     categorias = {}
     for row in rows:
         categoria = str(row["categoria"]).strip()
@@ -236,13 +269,16 @@ async def stats_categories():
 # Top rated
 @app.get("/api/v1/books/top-rated")
 async def top_rated_books(limit: int = 10):
+    """
+    Retorna uma lista dos livros com a classificação máxima (Rating 5).
+    """    
     livros = query_db("SELECT titulo, categoria, rating FROM books_details WHERE rating = 5")
     return {"top_rated_books": livros[:limit]}
 
 # Faixa de preco
 @app.get("/api/v1/books/price-range")
 async def books_price_range(min: float = Query(...), max: float = Query(...)):
-    rows = query_db("SELECT titulo, categoria, preco, disponibilidade FROM books_details WHERE preco IS NOT NULL AND preco != ''")
+    rows = query_db("SELECT titulo, categoria, preço, disponibilidade FROM books_details WHERE preço IS NOT NULL AND preço != ''")
     livros_filtrados = []
     for row in rows:
         try:
@@ -260,6 +296,7 @@ async def books_price_range(min: float = Query(...), max: float = Query(...)):
 
 @app.get("/api/v1/ml/features")
 async def get_ml_features():
+    
     """
     Retorna dados limpos e formatados para serem usados como features de um modelo ML.
     Filtra entradas onde rating ou preco não podem ser convertidos para float.
@@ -339,6 +376,15 @@ async def get_ml_training_data():
 @app.post("/api/v1/ml/predictions")
 async def receive_predictions(
     predictions_payload: List[Dict[str, Any]] = Body(..., description="Lista de objetos de predição, contendo features e o valor predito."),
+    example=[{
+        "input_features": {
+            "rating": 5,
+            "categoria": "Non-Fiction",
+            "feature_set": [1, 0, 0]
+        },
+        "predicted_price": 55.75,
+        "model_version": "1.0.1"
+    }]
 ):
     """
     Recebe um lote de predições de um modelo ML e as armazena no banco de dados SQLite para persistência.
@@ -405,3 +451,22 @@ async def receive_predictions(
             "message": f"Recebidas {num_predictions} predições, mas apenas {successful_inserts} foram armazenadas com sucesso. Verifique os logs do servidor para detalhes.",
             "status": "partial_success"
         }
+    
+@app.get("/api/v1/ml/get-predictions")
+async def get_predictions():
+    """
+    Retorna as predições de preços armazenadas no banco de dados.
+    As features de entrada são retornadas no formato JSON (dict).
+    """
+    query = "SELECT timestamp, predicted_price, input_features_json, model_version FROM ml_predictions ORDER BY timestamp DESC LIMIT ?"
+    predictions = query_db(query, )
+    
+    # O input_features_json é uma string, precisamos fazer o parse de volta para um objeto JSON (dict)
+    for pred in predictions:
+        try:
+            # Renomeia e faz o parse da string JSON
+            pred['input_features'] = json.loads(pred.pop('input_features_json'))
+        except json.JSONDecodeError:
+            pred['input_features'] = {"error": "JSON de features inválido"}
+            
+    return {"predictions": predictions}
