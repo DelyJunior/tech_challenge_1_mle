@@ -190,6 +190,8 @@ async def get_categories():
     categorias = query_db("SELECT DISTINCT categoria FROM books_details WHERE disponibilidade > 0")
     return {"Categorias_disponiveis": categorias}
 
+
+
 @app.get("/api/v1/health")
 async def health_check():
     """
@@ -204,37 +206,69 @@ async def health_check():
         return {"status": "error", "detail": f"Erro ao ler BD: {str(e)}"}
     return {"status": "ok", "total_livros": result["total"]}
 
+
+
+
+
 # Estatísticas gerais
 @app.get("/api/v1/stats/overview")
 async def stats_overview():
     """
-    Retorna estatísticas gerais sobre os dados, incluindo total de livros, preço médio e distribuição de ratings.
-    """    
-    total_livros = query_db("SELECT COUNT(*) as total FROM books_details", fetchone=True)["total"]
-    precos_raw = query_db("SELECT preco FROM books_details WHERE preco IS NOT NULL AND preco != ''")
-    precos = []
-    for row in precos_raw:
-        try:
-            precos.append(float(row["preco"]))
-        except:
-            continue
-    preco_medio = round(sum(precos) / len(precos), 2) if precos else 0
-    ratings = query_db("""
-        SELECT rating, COUNT(*) as total
-        FROM books_details
-        WHERE rating IS NOT NULL AND rating != ''
-        GROUP BY rating
-    """)
-    return {
-        "total_livros": total_livros,
-        "preco_medio": preco_medio,
-        "distribuicao_ratings": ratings
-    }
+    Retorna estatísticas gerais sobre os dados, incluindo:
+    - total de livros
+    - preço médio
+    - distribuição de ratings
+    """
+    try:
+        # Total de livros
+        result = query_db("SELECT COUNT(*) as total FROM books_details", fetchone=True)
+        total_livros = result.get("total", 0) if result else 0
+
+        # Preço médio
+        precos_raw = query_db("SELECT preco FROM books_details")
+        precos = []
+        if precos_raw:
+            for row in precos_raw:
+                try:
+                    preco_val = float(row.get("preco") or 0)
+                    if preco_val > 0:
+                        precos.append(preco_val)
+                except Exception:
+                    continue
+        preco_medio = round(sum(precos) / len(precos), 2) if precos else 0
+
+        # Distribuição de ratings
+        ratings_raw = query_db("""
+            SELECT rating, COUNT(*) as total
+            FROM books_details
+            GROUP BY rating
+        """) or []
+
+        distrib_ratings = []
+        for r in ratings_raw:
+            try:
+                rating_val = float(r.get("rating") or 0)
+                total_val = int(r.get("total") or 0)
+                if rating_val > 0:
+                    distrib_ratings.append({"rating": rating_val, "total": total_val})
+            except Exception:
+                continue
+
+        return {
+            "total_livros": total_livros,
+            "preco_medio": preco_medio,
+            "distribuicao_ratings": distrib_ratings
+        }
+
+    except Exception as e:
+        return {"error": str(e)}
+
+
 
 # Estatísticas por categoria
 @app.get("/api/v1/stats/categories")
 async def stats_categories():
-    rows = query_db("SELECT categoria, preço FROM books_details WHERE categoria IS NOT NULL AND categoria != ''")
+    rows = query_db("SELECT categoria, preco FROM books_details WHERE categoria IS NOT NULL AND categoria != ''")
     categorias = {}
     for row in rows:
         categoria = str(row["categoria"]).strip()
@@ -278,7 +312,7 @@ async def top_rated_books(limit: int = 10):
 # Faixa de preco
 @app.get("/api/v1/books/price-range")
 async def books_price_range(min: float = Query(...), max: float = Query(...)):
-    rows = query_db("SELECT titulo, categoria, preço, disponibilidade FROM books_details WHERE preço IS NOT NULL AND preço != ''")
+    rows = query_db("SELECT titulo, categoria, preco, disponibilidade FROM books_details WHERE preco > 0")
     livros_filtrados = []
     for row in rows:
         try:
@@ -470,3 +504,9 @@ async def get_predictions():
             pred['input_features'] = {"error": "JSON de features inválido"}
             
     return {"predictions": predictions}
+
+
+# if __name__ == "__main__":
+#     print("Rotas registradas na API:")
+#     for route in app.routes:
+#         print(route.path)
