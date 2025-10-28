@@ -506,7 +506,9 @@ async def get_predictions():
     return {"predictions": predictions}
 
 
-# if __name__ == "__main__":
-#     print("Rotas registradas na API:")
-#     for route in app.routes:
-#         print(route.path)
+
+# Último endpoint que lista todos os anteriores para o streamlit
+@app.get("/api/v1/endpoints")
+async def list_endpoints():
+    result = [{"path": route.path, "methods": list(route.methods)} for route in app.routes if "GET" in route.methods or "POST" in route.methods]
+    return result
