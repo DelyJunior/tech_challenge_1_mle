@@ -1,228 +1,205 @@
-# \# Books API — Tech Challenge (Fase 1)
+# Books API — Tech Challenge (Fase 1)
 
-# 
 
-# \## Visão geral do projeto
 
-# Este repositório implementa um pipeline completo para disponibilizar dados de livros por meio de uma API pública, simulando um cenário real de construção de uma base para \*\*recomendações de livros\*\*. O fluxo contempla:
+## Visão geral do projeto
 
-# 
+Este repositório implementa um pipeline completo para disponibilizar dados de livros por meio de uma API pública, simulando um cenário real de construção de uma base para \*\*recomendações de livros\*\*. O fluxo contempla:
 
-# \- \*\*Ingestão (on demand)\*\* por scraping do site fonte.
 
-# \- \*\*Processamento/ETL\*\* com validações e normalizações.
 
-# \- \*\*Armazenamento\*\* em \*\*SQLite\*\*.
+- \*\*Ingestão (on demand)\*\* por scraping do site fonte.
 
-# \- \*\*API REST (FastAPI)\*\* com endpoints Core, Insights e ML-Ready.
+- \*\*Processamento/ETL\*\* com validações e normalizações.
 
-# \- \*\*Consumo\*\* por cientistas de dados e aplicações de ML.
+- \*\*Armazenamento\*\* em \*\*SQLite\*\*.
 
-# 
+- \*\*API REST (FastAPI)\*\* com endpoints Core, Insights e ML-Ready.
 
-# > O objetivo é garantir uma base consistente para consumo analítico e treinamento de modelos, com foco em escalabilidade e reuso.
+- \*\*Consumo\*\* por cientistas de dados e aplicações de ML.
 
-# 
 
-# ---
 
-# 
+> O objetivo é garantir uma base consistente para consumo analítico e treinamento de modelos, com foco em escalabilidade e reuso.
 
-# \## Arquitetura (alto nível)
 
-# 
 
-# \- Fonte: https://books.toscrape.com/
+---
 
-# \- Scraper (Selenium) → CSV: `data/books\_details.csv`
 
-# \- ETL (validação/limpeza) → SQLite: `data/challenge1.sqlite` (tabela `books\_details`)
 
-# \- API (FastAPI) → Endpoints Core/Insights/ML/Auth
+## Arquitetura (alto nível)
 
-# \- Consumidores (DS/ML): recebem JSON; predições são persistidas via `/api/v1/ml/predictions`
 
-# 
 
-# > Tabelas auxiliares geridas pela API: `users`, `ml\_predictions`.
+- Fonte: https://books.toscrape.com/
 
-# 
+- Scraper (Selenium) → CSV: `data/books\_details.csv`
 
-# ---
+- ETL (validação/limpeza) → SQLite: `data/challenge1.sqlite` (tabela `books\_details`)
 
-# 
+- API (FastAPI) → Endpoints Core/Insights/ML/Auth
 
-# \## Estrutura recomendada de pastas
+- Consumidores (DS/ML): recebem JSON; predições são persistidas via `/api/v1/ml/predictions`
 
-# 
 
-# ```
 
-# .
+> Tabelas auxiliares geridas pela API: `users`, `ml\_predictions`.
 
-# ├─ data/
 
-# │  ├─ books\_details.csv
 
-# │  └─ challenge1.sqlite
+---
 
-# ├─ notebooks/
+ 
 
-# │  ├─ bookstoscrape\_Scraper.ipynb
+## Estrutura recomendada de pastas
 
-# │  ├─ exploratory\_data\_analysis.ipynb
 
-# │  └─ model\_pipeline.ipynb
 
-# ├─ main.py
+```
 
-# ├─ auth.py
+.
 
-# ├─ db\_usuarios.py
+├─ data/
 
-# ├─ requirements.txt (recomendado)
+│  ├─ books\_details.csv
 
-# └─ README.md
+│  └─ challenge1.sqlite
 
-# ```
+├─ notebooks/
 
-# 
+│  ├─ bookstoscrape\_Scraper.ipynb
 
-# ---
+│  ├─ exploratory\_data\_analysis.ipynb
 
-# 
+│  └─ model\_pipeline.ipynb
 
-# \## Pré-requisitos
+├─ main.py
 
-# 
+├─ auth.py
 
-# \- Python 3.11+ recomendado
+├─ db\_usuarios.py
 
-# \- Google Chrome instalado (para Selenium)
+├─ requirements.txt (recomendado)
 
-# \- ChromeDriver compatível com sua versão do Chrome
+└─ README.md
 
-# &nbsp; - Dica: use webdriver-manager ou instale manualmente o ChromeDriver
+```
 
-# \- Pip/venv (ou Conda) para isolar dependências
 
-# 
 
-# ---
+---
 
-# 
 
-# \## Instalação e configuração
 
-# 
+\## Pré-requisitos
 
-# \### 1) Criar e ativar o ambiente virtual
 
-# \- venv (padrão Python)
 
-# &nbsp; - Windows:
+\- Python 3.11+ recomendado
 
-# &nbsp;   - `python -m venv .venv`
+\- Google Chrome instalado (para Selenium)
 
-# &nbsp;   - `.venv\\Scripts\\activate`
+\- ChromeDriver compatível com sua versão do Chrome
 
-# &nbsp; - macOS/Linux:
+- Dica: use webdriver-manager ou instale manualmente o ChromeDriver
 
-# &nbsp;   - `python3 -m venv .venv`
+\- Pip/venv (ou Conda) para isolar dependências
 
-# &nbsp;   - `source .venv/bin/activate`
 
-# 
 
-# \### 2) Instalar dependências
+---
 
-# Crie um `requirements.txt` (sugestão):
 
-# 
 
-# ```
+## Instalação e configuração
 
-# fastapi
 
-# uvicorn\[standard]
 
-# python-jose\[cryptography]
+### 1) Criar e ativar o ambiente virtual
 
-# passlib
+\- venv (padrão Python)
 
-# python-multipart
+- Windows:
 
-# pandas
+- `python -m venv .venv`
 
-# selenium
+- `.venv\\Scripts\\activate`
 
-# webdriver-manager
+- macOS/Linux:
 
-# tqdm
+- `python3 -m venv .venv`
 
-# fuzzywuzzy
+- `source .venv/bin/activate`
 
-# ```
 
-# 
+### 2) Instalar dependências
 
-# Instale:
+Crie um `requirements.txt` (sugestão):
 
-# \- `pip install -r requirements.txt`
 
-# 
 
-# Observações:
+```
 
-# \- `sqlite3` é da biblioteca padrão do Python.
+fastapi
+uvicorn\[standard]
+python-jose\[cryptography]
+passlib
+python-multipart
+pandas
+selenium
+webdriver-manager
+tqdm
+fuzzywuzzy
+```
 
-# \- `python-multipart` é necessário para o formulário do login (OAuth2PasswordRequestForm).
+Instale:
 
-# \- O notebook importa `fuzzywuzzy` e `tqdm` (usados no scraping).
+- `pip install -r requirements.txt`
 
-# 
+Observações:
 
-# \### 3) Preparar diretório de dados
+- `sqlite3` é da biblioteca padrão do Python.
+- `python-multipart` é necessário para o formulário do login (OAuth2PasswordRequestForm).
+- O notebook importa `fuzzywuzzy` e `tqdm` (usados no scraping).
 
-# \- Garanta a existência da pasta `data/`:
+ 
 
-# &nbsp; - `mkdir data` (macOS/Linux)
+### 3) Preparar diretório de dados
 
-# &nbsp; - `mkdir data` (PowerShell/Windows)
+- Garanta a existência da pasta `data/`:
+- `mkdir data` (macOS/Linux)
+- `mkdir data` (PowerShell/Windows)
 
-# 
 
-# ---
+---
 
-# 
 
-# \## Pipeline de dados
+## Pipeline de dados
 
-# 
+### 1) Ingestão (Scraping)
 
-# \### 1) Ingestão (Scraping)
+- Notebook: `notebooks/bookstoscrape\_Scraper.ipynb`
 
-# \- Notebook: `notebooks/bookstoscrape\_Scraper.ipynb`
+- Acessa `https://books.toscrape.com/`
 
-# &nbsp; - Acessa `https://books.toscrape.com/`
+- Paginação por `.next`
 
-# &nbsp; - Paginação por `.next`
+- Coleta links dos livros (cards `.product\_pod → h3 > a\[href]`)
 
-# &nbsp; - Coleta links dos livros (cards `.product\_pod → h3 > a\[href]`)
+- Para cada livro, extrai:
 
-# &nbsp; - Para cada livro, extrai:
+  - `titulo` (h1.text)
 
-# &nbsp;   - `titulo` (h1.text)
+  - `preço` (string “£..” → float)
 
-# &nbsp;   - `preço` (string “£..” → float)
+  - `rating` (classe em `p.star-rating` → mapeamento One..Five → 1.0..5.0)
 
-# &nbsp;   - `rating` (classe em `p.star-rating` → mapeamento One..Five → 1.0..5.0)
+  - `disponibilidade` (regex de dígitos em “In stock (N available)” → int)
 
-# &nbsp;   - `disponibilidade` (regex de dígitos em “In stock (N available)” → int)
+  - `categoria`, `imagem` (URL absoluta), `url\_livro` (href da página)
 
-# &nbsp;   - `categoria`, `imagem` (URL absoluta), `url\_livro` (href da página)
-
-# &nbsp; - Gera CSV em `data/books\_details.csv`
+- Gera CSV em `data/books\_details.csv`
 
 # 
 
@@ -234,57 +211,23 @@
 
 # 
 
-# \### 2) ETL (validação/limpeza)
+### 2) ETL (validação/limpeza)
 
-# \- Leitura: `data/books\_details.csv`
+- Leitura: `data/books\_details.csv`
 
-# \- Validações recomendadas:
+- Validações recomendadas:
 
-# &nbsp; - Schema e tipos:
+- Schema e tipos:
 
-# &nbsp;   - `titulo:str`, `preço:float`, `rating:float (1.0–5.0)`, `disponibilidade:int (>=0)`, `categoria:str`, `imagem:str`, `url\_livro:str`
+  - `titulo:str`, `preço:float`, `rating:float (1.0–5.0)`, `disponibilidade:int (>=0)`, `categoria:str`, `imagem:str`, `url\_livro:str`
 
-# &nbsp; - Deduplicação por `url\_livro`
+- Deduplicação por `url\_livro`
 
-# &nbsp; - Normalização (trim) e checagem de faixas (`preço >= 0`, `rating ∈ \[1..5]`)
+- Normalização (trim) e checagem de faixas (`preço >= 0`, `rating ∈ \[1..5]`)
 
-# \- Carga: grava no SQLite `data/challenge1.sqlite`, tabela `books\_details`
+- Carga: grava no SQLite `data/challenge1.sqlite`, tabela `books\_details`
 
-# &nbsp; - No notebook: `df.to\_sql('books\_details', conn, if\_exists='replace', index=False)`
-
-# 
-
-# ---
-
-# 
-
-# \## Executando a API
-
-# 
-
-# \### 1) Ajustes mínimos (opcional, mas recomendado)
-
-# \- No `auth.py`, substitua a `SECRET\_KEY` por um valor forte.
-
-# \- Avançado: externalize `SECRET\_KEY` como variável de ambiente e ajuste o código para ler via `os.getenv`.
-
-# 
-
-# \### 2) Subir a aplicação (ambiente local)
-
-# \- Na raiz do projeto:
-
-# &nbsp; - `uvicorn main:app --reload`
-
-# \- A API subirá, por padrão, em: `http://127.0.0.1:8000`
-
-# 
-
-# \### 3) Documentação automática (FastAPI)
-
-# \- Swagger UI: `http://127.0.0.1:8000/docs`
-
-# \- Redoc: `http://127.0.0.1:8000/redoc`
+- No notebook: `df.to\_sql('books\_details', conn, if\_exists='replace', index=False)`
 
 # 
 
@@ -292,19 +235,53 @@
 
 # 
 
-# \## Banco de dados
+## Executando a API
 
 # 
 
-# \- Caminho: `data/challenge1.sqlite` (conforme `main.py`)
+### 1) Ajustes mínimos (opcional, mas recomendado)
 
-# \- Tabelas utilizadas:
+- No `auth.py`, substitua a `SECRET\_KEY` por um valor forte.
 
-# &nbsp; - `books\_details`: fonte principal para os endpoints Core/Insights/ML
+- Avançado: externalize `SECRET\_KEY` como variável de ambiente e ajuste o código para ler via `os.getenv`.
 
-# &nbsp; - `users`: criada por `/add\_user` (auth)
+# 
 
-# &nbsp; - `ml\_predictions`: criada por `/api/v1/ml/predictions` (persistência de predições)
+### 2) Subir a aplicação (ambiente local)
+
+- Na raiz do projeto:
+
+- `uvicorn main:app --reload`
+
+- A API subirá, por padrão, em: `http://127.0.0.1:8000`
+
+# 
+
+### 3) Documentação automática (FastAPI)
+
+- Swagger UI: `http://127.0.0.1:8000/docs`
+
+- Redoc: `http://127.0.0.1:8000/redoc`
+
+# 
+
+# ---
+
+# 
+
+## Banco de dados
+
+# 
+
+- Caminho: `data/challenge1.sqlite` (conforme `main.py`)
+
+- Tabelas utilizadas:
+
+- `books\_details`: fonte principal para os endpoints Core/Insights/ML
+
+- `users`: criada por `/add\_user` (auth)
+
+- `ml\_predictions`: criada por `/api/v1/ml/predictions` (persistência de predições)
 
 # 
 
@@ -316,393 +293,393 @@
 
 # 
 
-# \## Documentação das rotas (com exemplos)
+## Documentação das rotas (com exemplos)
 
 # 
 
-# \### Saúde e raiz
+### Saúde e raiz
 
-# \- GET `/` 
+- GET `/` 
 
-# &nbsp; - Exemplo:
+- Exemplo:
 
-# &nbsp;   - Request: `curl http://127.0.0.1:8000/`
+  - Request: `curl http://127.0.0.1:8000/`
 
-# &nbsp;   - Response: `{"message":"Hello, FastAPI!"}`
-
-# 
-
-# \- GET `/api/v1/health`
-
-# &nbsp; - Verifica acesso ao SQLite e conta registros.
-
-# &nbsp; - Exemplo:
-
-# &nbsp;   - Request: `curl http://127.0.0.1:8000/api/v1/health`
-
-# &nbsp;   - Response (ex.): `{"status":"ok","total\_livros": 1000}`
+  - Response: `{"message":"Hello, FastAPI!"}`
 
 # 
 
-# \### Core
+- GET `/api/v1/health`
 
-# \- GET `/api/v1/books`
+- Verifica acesso ao SQLite e conta registros.
 
-# &nbsp; - Retorna livros com disponibilidade > 0 (campos: `titulo`).
+- Exemplo:
 
-# &nbsp; - Exemplo:
+  - Request: `curl http://127.0.0.1:8000/api/v1/health`
 
-# &nbsp;   - Request: `curl http://127.0.0.1:8000/api/v1/books`
-
-# &nbsp;   - Response (ex.): `{"livros\_disponiveis":\[{"titulo":"A Light in the Attic"}, ...]}`
+  - Response (ex.): `{"status":"ok","total\_livros": 1000}`
 
 # 
 
-# \- GET `/api/v1/books/{id:int}`
+### Core
 
-# &nbsp; - Retorna o registro completo por `rowid`.
+- GET `/api/v1/books`
 
-# &nbsp; - Exemplo:
+- Retorna livros com disponibilidade > 0 (campos: `titulo`).
 
-# &nbsp;   - Request: `curl http://127.0.0.1:8000/api/v1/books/1`
+- Exemplo:
 
-# &nbsp;   - Response (ex.): 
+  - Request: `curl http://127.0.0.1:8000/api/v1/books`
 
-# &nbsp;     ```
-
-# &nbsp;     {
-
-# &nbsp;       "ID": 1,
-
-# &nbsp;       "titulo": "...",
-
-# &nbsp;       "preço": 51.77,
-
-# &nbsp;       "rating": 3.0,
-
-# &nbsp;       "disponibilidade": 22,
-
-# &nbsp;       "categoria": "Poetry",
-
-# &nbsp;       "imagem": "https://...",
-
-# &nbsp;       "url\_livro": "https://..."
-
-# &nbsp;     }
-
-# &nbsp;     ```
+  - Response (ex.): `{"livros\_disponiveis":\[{"titulo":"A Light in the Attic"}, ...]}`
 
 # 
 
-# \- GET `/api/v1/books/search?title\&category`
+- GET `/api/v1/books/{id:int}`
 
-# &nbsp; - Busca por `titulo` e/ou `categoria` (LIKE).
+- Retorna o registro completo por `rowid`.
 
-# &nbsp; - Exemplo:
+- Exemplo:
 
-# &nbsp;   - Request: `curl "http://127.0.0.1:8000/api/v1/books/search?title=light\&category=Poetry"`
+  - Request: `curl http://127.0.0.1:8000/api/v1/books/1`
 
-# &nbsp;   - Response (ex.): `{"resultado":\[{"ID":1,"titulo":"A Light in the Attic","categoria":"Poetry","disponibilidade":22}]}`
+  - Response (ex.): 
 
-# 
+    ```
 
-# \- GET `/api/v1/categories`
+    {
 
-# &nbsp; - Lista categorias com disponibilidade > 0.
+      "ID": 1,
 
-# &nbsp; - Exemplo:
+      "titulo": "...",
 
-# &nbsp;   - Request: `curl http://127.0.0.1:8000/api/v1/categories`
+      "preço": 51.77,
 
-# &nbsp;   - Response (ex.): `{"Categorias\_disponiveis":\[{"categoria":"Poetry"}, {"categoria":"Fiction"}, ...]}`
+      "rating": 3.0,
 
-# 
+      "disponibilidade": 22,
 
-# \### Insights
+      "categoria": "Poetry",
 
-# \- GET `/api/v1/stats/overview`
+      "imagem": "https://...",
 
-# &nbsp; - Retorna: total de livros, preço médio, distribuição de ratings.
+      "url\_livro": "https://..."
 
-# &nbsp; - Exemplo:
+    }
 
-# &nbsp;   - Request: `curl http://127.0.0.1:8000/api/v1/stats/overview`
-
-# &nbsp;   - Response (ex.): 
-
-# &nbsp;     ```
-
-# &nbsp;     {
-
-# &nbsp;       "total\_livros": 1000,
-
-# &nbsp;       "preco\_medio": 35.77,
-
-# &nbsp;       "distribuicao\_ratings": \[{"rating":5.0,"total":200}, ...]
-
-# &nbsp;     }
-
-# &nbsp;     ```
+    ```
 
 # 
 
-# \- GET `/api/v1/stats/categories`
+- GET `/api/v1/books/search?title\&category`
 
-# &nbsp; - Retorna, por categoria: quantidade, preço médio, min, max.
+- Busca por `titulo` e/ou `categoria` (LIKE).
 
-# &nbsp; - Exemplo:
+- Exemplo:
 
-# &nbsp;   - Request: `curl http://127.0.0.1:8000/api/v1/stats/categories`
+  - Request: `curl "http://127.0.0.1:8000/api/v1/books/search?title=light\&category=Poetry"`
 
-# &nbsp;   - Response (ex.):
-
-# &nbsp;     ```
-
-# &nbsp;     {
-
-# &nbsp;       "categorias":\[
-
-# &nbsp;         {"categoria":"Poetry","quantidade":20,"preco\_medio":31.2,"preco\_min":10.5,"preco\_max":55.0}
-
-# &nbsp;       ]
-
-# &nbsp;     }
-
-# &nbsp;     ```
+  - Response (ex.): `{"resultado":\[{"ID":1,"titulo":"A Light in the Attic","categoria":"Poetry","disponibilidade":22}]}`
 
 # 
 
-# \### Extras
+- GET `/api/v1/categories`
 
-# \- GET `/api/v1/books/top-rated?limit=10`
+- Lista categorias com disponibilidade > 0.
 
-# &nbsp; - Retorna livros com `rating = 5` (corte em memória pelo `limit`).
+- Exemplo:
 
-# &nbsp; - Exemplo:
+  - Request: `curl http://127.0.0.1:8000/api/v1/categories`
 
-# &nbsp;   - Request: `curl "http://127.0.0.1:8000/api/v1/books/top-rated?limit=5"`
-
-# &nbsp;   - Response (ex.): `{"top\_rated\_books":\[{"titulo":"Sapiens...", "categoria":"History", "rating":5.0}, ...]}`
+  - Response (ex.): `{"Categorias\_disponiveis":\[{"categoria":"Poetry"}, {"categoria":"Fiction"}, ...]}`
 
 # 
 
-# \- GET `/api/v1/books/price-range?min=10\&max=30`
+### Insights
 
-# &nbsp; - Filtra em memória por faixa de preço.
+- GET `/api/v1/stats/overview`
 
-# &nbsp; - Exemplo:
+- Retorna: total de livros, preço médio, distribuição de ratings.
 
-# &nbsp;   - Request: `curl "http://127.0.0.1:8000/api/v1/books/price-range?min=10\&max=30"`
+- Exemplo:
 
-# &nbsp;   - Response (ex.):
+  - Request: `curl http://127.0.0.1:8000/api/v1/stats/overview`
 
-# &nbsp;     ```
+  - Response (ex.): 
 
-# &nbsp;     {
+    ```
 
-# &nbsp;       "livros\_filtrados":\[
+    {
 
-# &nbsp;         {"titulo":"The Requiem Red","categoria":"Young Adult","preço":22.65,"disponibilidade":"19"}
+      "total\_livros": 1000,
 
-# &nbsp;       ]
+      "preco\_medio": 35.77,
 
-# &nbsp;     }
+      "distribuicao\_ratings": \[{"rating":5.0,"total":200}, ...]
 
-# &nbsp;     ```
+    }
 
-# 
-
-# \### ML-Ready
-
-# \- GET `/api/v1/ml/features`
-
-# &nbsp; - Retorna features numéricas limpas de `rating`, `preco`, com `categoria` e `disponibilidade`.
-
-# &nbsp; - Exemplo:
-
-# &nbsp;   - Request: `curl http://127.0.0.1:8000/api/v1/ml/features`
-
-# &nbsp;   - Response (ex.):
-
-# &nbsp;     ```
-
-# &nbsp;     {
-
-# &nbsp;       "features\_data":\[{"titulo":"...","rating":4.0,"preco":47.82,"categoria":"Mystery","disponibilidade":20}],
-
-# &nbsp;       "total\_registros": 980
-
-# &nbsp;     }
-
-# &nbsp;     ```
+    ```
 
 # 
 
-# \- GET `/api/v1/ml/training-data`
+- GET `/api/v1/stats/categories`
 
-# &nbsp; - Retorna dataset pronto para treino com \*\*OHE\*\* de `categoria`:
+- Retorna, por categoria: quantidade, preço médio, min, max.
 
-# &nbsp;   - `X\_rating` (float)
+- Exemplo:
 
-# &nbsp;   - `X\_categoria\_ohe` (vetor binário)
+  - Request: `curl http://127.0.0.1:8000/api/v1/stats/categories`
 
-# &nbsp;   - `Y\_preco` (float)
+  - Response (ex.):
 
-# &nbsp;   - `one\_hot\_encoding\_map` (ordem das categorias)
+    ```
 
-# &nbsp; - Exemplo:
+    {
 
-# &nbsp;   - Request: `curl http://127.0.0.1:8000/api/v1/ml/training-data`
+      "categorias":\[
 
-# &nbsp;   - Response (ex.):
+        {"categoria":"Poetry","quantidade":20,"preco\_medio":31.2,"preco\_min":10.5,"preco\_max":55.0}
 
-# &nbsp;     ```
+      ]
 
-# &nbsp;     {
+    }
 
-# &nbsp;       "training\_data":\[{"X\_rating":4.0,"X\_categoria\_ohe":\[0,1,0,...],"Y\_preco":47.82}],
-
-# &nbsp;       "total\_samples": 980,
-
-# &nbsp;       "one\_hot\_encoding\_map": \["Poetry","Mystery","History", ...]
-
-# &nbsp;     }
-
-# &nbsp;     ```
+    ```
 
 # 
 
-# \- POST `/api/v1/ml/predictions`
+### Extras
 
-# &nbsp; - Persiste predições em `ml\_predictions`.
+- GET `/api/v1/books/top-rated?limit=10`
 
-# &nbsp; - Body (JSON, lista de objetos):
+- Retorna livros com `rating = 5` (corte em memória pelo `limit`).
 
-# &nbsp;   ```
+- Exemplo:
 
-# &nbsp;   \[
+  - Request: `curl "http://127.0.0.1:8000/api/v1/books/top-rated?limit=5"`
 
-# &nbsp;     {
-
-# &nbsp;       "predicted\_price": 39.9,
-
-# &nbsp;       "input\_features": {"rating":4.0,"categoria":"Mystery"},
-
-# &nbsp;       "model\_version": "v1.0.0"
-
-# &nbsp;     }
-
-# &nbsp;   ]
-
-# &nbsp;   ```
-
-# &nbsp; - Exemplo:
-
-# &nbsp;   - Request:
-
-# &nbsp;     ```
-
-# &nbsp;     curl -X POST http://127.0.0.1:8000/api/v1/ml/predictions \\
-
-# &nbsp;       -H "Content-Type: application/json" \\
-
-# &nbsp;       -d '\[{"predicted\_price":39.9,"input\_features":{"rating":4.0,"categoria":"Mystery"},"model\_version":"v1.0.0"}]'
-
-# &nbsp;     ```
-
-# &nbsp;   - Response (ex.):
-
-# &nbsp;     ```
-
-# &nbsp;     {"message":"Sucesso ao receber e armazenar 1 de 1 predições no SQLite.","status":"stored\_ok"}
-
-# &nbsp;     ```
+  - Response (ex.): `{"top\_rated\_books":\[{"titulo":"Sapiens...", "categoria":"History", "rating":5.0}, ...]}`
 
 # 
 
-# \### Autenticação (bônus)
+- GET `/api/v1/books/price-range?min=10\&max=30`
 
-# \- POST `/add\_user`
+- Filtra em memória por faixa de preço.
 
-# &nbsp; - Cria tabela `users` se não existir e insere usuário com senha hasheada.
+- Exemplo:
 
-# &nbsp; - Body (JSON):
+  - Request: `curl "http://127.0.0.1:8000/api/v1/books/price-range?min=10\&max=30"`
 
-# &nbsp;   ```
+  - Response (ex.):
 
-# &nbsp;   {"username":"admin","password":"s3cr3t"}
+    ```
 
-# &nbsp;   ```
+    {
 
-# &nbsp; - Exemplo:
+      "livros\_filtrados":\[
 
-# &nbsp;   - Request:
+        {"titulo":"The Requiem Red","categoria":"Young Adult","preço":22.65,"disponibilidade":"19"}
 
-# &nbsp;     ```
+      ]
 
-# &nbsp;     curl -X POST http://127.0.0.1:8000/add\_user \\
+    }
 
-# &nbsp;       -H "Content-Type: application/json" \\
-
-# &nbsp;       -d '{"username":"admin","password":"s3cr3t"}'
-
-# &nbsp;     ```
-
-# &nbsp;   - Response (ex.): `{"message":"Usuário admin criado com sucesso!"}`
+    ```
 
 # 
 
-# \- POST `/api/v1/auth/login`
+### ML-Ready
 
-# &nbsp; - Retorna JWT (OAuth2PasswordRequestForm).
+- GET `/api/v1/ml/features`
 
-# &nbsp; - Exemplo:
+- Retorna features numéricas limpas de `rating`, `preco`, com `categoria` e `disponibilidade`.
 
-# &nbsp;   - Request:
+- Exemplo:
 
-# &nbsp;     ```
+  - Request: `curl http://127.0.0.1:8000/api/v1/ml/features`
 
-# &nbsp;     curl -X POST http://127.0.0.1:8000/api/v1/auth/login \\
+  - Response (ex.):
 
-# &nbsp;       -H "Content-Type: application/x-www-form-urlencoded" \\
+    ```
 
-# &nbsp;       -d "username=admin\&password=s3cr3t"
+    {
 
-# &nbsp;     ```
+      "features\_data":\[{"titulo":"...","rating":4.0,"preco":47.82,"categoria":"Mystery","disponibilidade":20}],
 
-# &nbsp;   - Response (ex.):
+      "total\_registros": 980
 
-# &nbsp;     ```
+    }
 
-# &nbsp;     {"access\_token":"<JWT>", "token\_type":"bearer"}
-
-# &nbsp;     ```
+    ```
 
 # 
 
-# \- POST `/api/v1/auth/refresh`
+- GET `/api/v1/ml/training-data`
 
-# &nbsp; - Renova token (header Authorization: Bearer <token>).
+- Retorna dataset pronto para treino com \*\*OHE\*\* de `categoria`:
 
-# &nbsp; - Exemplo:
+  - `X\_rating` (float)
 
-# &nbsp;   - Request:
+  - `X\_categoria\_ohe` (vetor binário)
 
-# &nbsp;     ```
+  - `Y\_preco` (float)
 
-# &nbsp;     curl -X POST http://127.0.0.1:8000/api/v1/auth/refresh \\
+  - `one\_hot\_encoding\_map` (ordem das categorias)
 
-# &nbsp;       -H "Authorization: Bearer <JWT>"
+- Exemplo:
 
-# &nbsp;     ```
+  - Request: `curl http://127.0.0.1:8000/api/v1/ml/training-data`
 
-# &nbsp;   - Response (ex.):
+  - Response (ex.):
 
-# &nbsp;     ```
+    ```
 
-# &nbsp;     {"access\_token":"<NEW\_JWT>", "token\_type":"bearer"}
+    {
 
-# &nbsp;     ```
+      "training\_data":\[{"X\_rating":4.0,"X\_categoria\_ohe":\[0,1,0,...],"Y\_preco":47.82}],
+
+      "total\_samples": 980,
+
+      "one\_hot\_encoding\_map": \["Poetry","Mystery","History", ...]
+
+    }
+
+    ```
+
+# 
+
+- POST `/api/v1/ml/predictions`
+
+- Persiste predições em `ml\_predictions`.
+
+- Body (JSON, lista de objetos):
+
+  ```
+
+  \[
+
+    {
+
+      "predicted\_price": 39.9,
+
+      "input\_features": {"rating":4.0,"categoria":"Mystery"},
+
+      "model\_version": "v1.0.0"
+
+    }
+
+  ]
+
+  ```
+
+- Exemplo:
+
+  - Request:
+
+    ```
+
+    curl -X POST http://127.0.0.1:8000/api/v1/ml/predictions \\
+
+      -H "Content-Type: application/json" \\
+
+      -d '\[{"predicted\_price":39.9,"input\_features":{"rating":4.0,"categoria":"Mystery"},"model\_version":"v1.0.0"}]'
+
+    ```
+
+  - Response (ex.):
+
+    ```
+
+    {"message":"Sucesso ao receber e armazenar 1 de 1 predições no SQLite.","status":"stored\_ok"}
+
+    ```
+
+# 
+
+### Autenticação (bônus)
+
+- POST `/add\_user`
+
+- Cria tabela `users` se não existir e insere usuário com senha hasheada.
+
+- Body (JSON):
+
+  ```
+
+  {"username":"admin","password":"s3cr3t"}
+
+  ```
+
+- Exemplo:
+
+  - Request:
+
+    ```
+
+    curl -X POST http://127.0.0.1:8000/add\_user \\
+
+      -H "Content-Type: application/json" \\
+
+      -d '{"username":"admin","password":"s3cr3t"}'
+
+    ```
+
+  - Response (ex.): `{"message":"Usuário admin criado com sucesso!"}`
+
+# 
+
+- POST `/api/v1/auth/login`
+
+- Retorna JWT (OAuth2PasswordRequestForm).
+
+- Exemplo:
+
+  - Request:
+
+    ```
+
+    curl -X POST http://127.0.0.1:8000/api/v1/auth/login \\
+
+      -H "Content-Type: application/x-www-form-urlencoded" \\
+
+      -d "username=admin\&password=s3cr3t"
+
+    ```
+
+  - Response (ex.):
+
+    ```
+
+    {"access\_token":"<JWT>", "token\_type":"bearer"}
+
+    ```
+
+# 
+
+- POST `/api/v1/auth/refresh`
+
+- Renova token (header Authorization: Bearer <token>).
+
+- Exemplo:
+
+  - Request:
+
+    ```
+
+    curl -X POST http://127.0.0.1:8000/api/v1/auth/refresh \\
+
+      -H "Authorization: Bearer <JWT>"
+
+    ```
+
+  - Response (ex.):
+
+    ```
+
+    {"access\_token":"<NEW\_JWT>", "token\_type":"bearer"}
+
+    ```
 
 # 
 
@@ -714,75 +691,37 @@
 
 # 
 
-# \## Execução ponta-a-ponta (passo a passo)
+## Execução ponta-a-ponta (passo a passo)
 
 # 
 
-# 1\. Criar e ativar venv; instalar dependências (`pip install -r requirements.txt`).
+1\. Criar e ativar venv; instalar dependências (`pip install -r requirements.txt`).
 
-# 2\. Criar a pasta `data/`.
+2\. Criar a pasta `data/`.
 
-# 3\. Executar o notebook `notebooks/bookstoscrape\_Scraper.ipynb` para gerar:
+3\. Executar o notebook `notebooks/bookstoscrape\_Scraper.ipynb` para gerar:
 
-# &nbsp;  - `data/books\_details.csv`
+ - `data/books\_details.csv`
 
-# &nbsp;  - `data/challenge1.sqlite` (tabela `books\_details`)
+ - `data/challenge1.sqlite` (tabela `books\_details`)
 
-# 4\. Subir a API:
+4\. Subir a API:
 
-# &nbsp;  - `uvicorn main:app --reload`
+ - `uvicorn main:app --reload`
 
-# 5\. Acessar documentação:
+5\. Acessar documentação:
 
-# &nbsp;  - Swagger: `http://127.0.0.1:8000/docs`
+ - Swagger: `http://127.0.0.1:8000/docs`
 
-# 6\. (Opcional) Criar usuário e obter token JWT:
+6\. (Opcional) Criar usuário e obter token JWT:
 
-# &nbsp;  - POST `/add\_user` → POST `/api/v1/auth/login`
+ - POST `/add\_user` → POST `/api/v1/auth/login`
 
-# 7\. Realizar chamadas aos endpoints (Core, Insights, ML).
+7\. Realizar chamadas aos endpoints (Core, Insights, ML).
 
-# 8\. (Opcional) Persistir predições:
+8\. (Opcional) Persistir predições:
 
-# &nbsp;  - POST `/api/v1/ml/predictions` → tabela `ml\_predictions`.
-
-# 
-
-# ---
-
-# 
-
-# \## Boas práticas e próximos passos
-
-# 
-
-# \- \*\*Padronização de caminhos\*\*:
-
-# &nbsp; - Garanta que o notebook grave em `data/books\_details.csv` e `data/challenge1.sqlite` (coerente com o `main.py`).
-
-# \- \*\*Validação no ETL\*\*:
-
-# &nbsp; - Checagem explícita de schema, deduplicação por `url\_livro`, faixas e nulos críticos.
-
-# \- \*\*Índices no SQLite\*\*:
-
-# &nbsp; - Criar índices (ex.: `categoria`, `titulo`, `rating`) para acelerar buscas e consultas estatísticas.
-
-# \- \*\*Segurança\*\*:
-
-# &nbsp; - Mover `SECRET\_KEY` para variável de ambiente e usar no `auth.py`.
-
-# &nbsp; - Aplicar `Depends(get\_current\_user)` onde necessário.
-
-# \- \*\*Escalabilidade futura\*\*:
-
-# &nbsp; - Migrar para Postgres gerenciado.
-
-# &nbsp; - Agendar scraping (cron/Lambda) e usar fila (SQS/Kafka) para desacoplar.
-
-# &nbsp; - Múltiplas instâncias da API atrás de um Load Balancer.
-
-# &nbsp; - Observabilidade: logs estruturados, métricas e dashboard.
+- POST `/api/v1/ml/predictions` → tabela `ml\_predictions`.
 
 # 
 
@@ -790,3 +729,40 @@
 
 # 
 
+## Boas práticas e próximos passos
+
+# 
+
+- \*\*Padronização de caminhos\*\*:
+
+- Garanta que o notebook grave em `data/books\_details.csv` e `data/challenge1.sqlite` (coerente com o `main.py`).
+
+- \*\*Validação no ETL\*\*:
+
+- Checagem explícita de schema, deduplicação por `url\_livro`, faixas e nulos críticos.
+
+- \*\*Índices no SQLite\*\*:
+
+- Criar índices (ex.: `categoria`, `titulo`, `rating`) para acelerar buscas e consultas estatísticas.
+
+- \*\*Segurança\*\*:
+
+- Mover `SECRET\_KEY` para variável de ambiente e usar no `auth.py`.
+
+- Aplicar `Depends(get\_current\_user)` onde necessário.
+
+- \*\*Escalabilidade futura\*\*:
+
+- Migrar para Postgres gerenciado.
+
+- Agendar scraping (cron/Lambda) e usar fila (SQS/Kafka) para desacoplar.
+
+- Múltiplas instâncias da API atrás de um Load Balancer.
+
+- Observabilidade: logs estruturados, métricas e dashboard.
+
+# 
+
+# ---
+
+# 
