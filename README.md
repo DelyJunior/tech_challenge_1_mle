@@ -87,94 +87,6 @@ Este repositório implementa um pipeline completo para disponibilizar dados de l
 ```
 
 
-
----
-
-
-
-\## Pré-requisitos
-
-
-
-\- Python 3.11+ recomendado
-
-\- Google Chrome instalado (para Selenium)
-
-\- ChromeDriver compatível com sua versão do Chrome
-
-- Dica: use webdriver-manager ou instale manualmente o ChromeDriver
-
-\- Pip/venv (ou Conda) para isolar dependências
-
-
-
----
-
-
-
-## Instalação e configuração
-
-
-
-### 1) Criar e ativar o ambiente virtual
-
-\- venv (padrão Python)
-
-- Windows:
-
-- `python -m venv .venv`
-
-- `.venv\\Scripts\\activate`
-
-- macOS/Linux:
-
-- `python3 -m venv .venv`
-
-- `source .venv/bin/activate`
-
-
-### 2) Instalar dependências
-
-Crie um `requirements.txt` (sugestão):
-
-
-
-```
-
-fastapi
-uvicorn\[standard]
-python-jose\[cryptography]
-passlib
-python-multipart
-pandas
-selenium
-webdriver-manager
-tqdm
-fuzzywuzzy
-```
-
-Instale:
-
-- `pip install -r requirements.txt`
-
-Observações:
-
-- `sqlite3` é da biblioteca padrão do Python.
-- `python-multipart` é necessário para o formulário do login (OAuth2PasswordRequestForm).
-- O notebook importa `fuzzywuzzy` e `tqdm` (usados no scraping).
-
- 
-
-### 3) Preparar diretório de dados
-
-- Garanta a existência da pasta `data/`:
-- `mkdir data` (macOS/Linux)
-- `mkdir data` (PowerShell/Windows)
-
-
----
-
-
 ## Pipeline de dados
 
 ### 1) Ingestão (Scraping)
@@ -203,14 +115,6 @@ Observações:
 
 # 
 
-# > Dica Selenium:
-
-# > - Importe exceções: `from selenium.common.exceptions import NoSuchElementException`
-
-# > - Prefira `WebDriverWait`/`EC` em vez de `time.sleep` fixo.
-
-# 
-
 ### 2) ETL (validação/limpeza)
 
 - Leitura: `data/books\_details.csv`
@@ -229,45 +133,12 @@ Observações:
 
 - No notebook: `df.to\_sql('books\_details', conn, if\_exists='replace', index=False)`
 
-# 
-
 # ---
 
-# 
 
 ## Executando a API
 
-# 
 
-### 1) Ajustes mínimos (opcional, mas recomendado)
-
-- No `auth.py`, substitua a `SECRET\_KEY` por um valor forte.
-
-- Avançado: externalize `SECRET\_KEY` como variável de ambiente e ajuste o código para ler via `os.getenv`.
-
-# 
-
-### 2) Subir a aplicação (ambiente local)
-
-- Na raiz do projeto:
-
-- `uvicorn main:app --reload`
-
-- A API subirá, por padrão, em: `http://127.0.0.1:8000`
-
-# 
-
-### 3) Documentação automática (FastAPI)
-
-- Swagger UI: `http://127.0.0.1:8000/docs`
-
-- Redoc: `http://127.0.0.1:8000/redoc`
-
-# 
-
-# ---
-
-# 
 
 ## Banco de dados
 
@@ -283,12 +154,6 @@ Observações:
 
 - `ml\_predictions`: criada por `/api/v1/ml/predictions` (persistência de predições)
 
-# 
-
-# > Importante: os endpoints utilizam `rowid` como `ID` lógico ao retornar `/api/v1/books/{id}`.
-
-# 
-
 # ---
 
 # 
@@ -296,8 +161,6 @@ Observações:
 ## Documentação das rotas (com exemplos)
 
 # 
-
-### Saúde e raiz
 
 - GET `/` 
 
@@ -680,89 +543,6 @@ Observações:
     {"access\_token":"<NEW\_JWT>", "token\_type":"bearer"}
 
     ```
-
-# 
-
-# > Observação: por padrão, as rotas não estão protegidas com `Depends(get\_current\_user)`. Você pode aplicar a proteção em endpoints sensíveis seguindo o comentário no `main.py`.
-
-# 
-
-# ---
-
-# 
-
-## Execução ponta-a-ponta (passo a passo)
-
-# 
-
-1\. Criar e ativar venv; instalar dependências (`pip install -r requirements.txt`).
-
-2\. Criar a pasta `data/`.
-
-3\. Executar o notebook `notebooks/bookstoscrape\_Scraper.ipynb` para gerar:
-
- - `data/books\_details.csv`
-
- - `data/challenge1.sqlite` (tabela `books\_details`)
-
-4\. Subir a API:
-
- - `uvicorn main:app --reload`
-
-5\. Acessar documentação:
-
- - Swagger: `http://127.0.0.1:8000/docs`
-
-6\. (Opcional) Criar usuário e obter token JWT:
-
- - POST `/add\_user` → POST `/api/v1/auth/login`
-
-7\. Realizar chamadas aos endpoints (Core, Insights, ML).
-
-8\. (Opcional) Persistir predições:
-
-- POST `/api/v1/ml/predictions` → tabela `ml\_predictions`.
-
-# 
-
-# ---
-
-# 
-
-## Boas práticas e próximos passos
-
-# 
-
-- \*\*Padronização de caminhos\*\*:
-
-- Garanta que o notebook grave em `data/books\_details.csv` e `data/challenge1.sqlite` (coerente com o `main.py`).
-
-- \*\*Validação no ETL\*\*:
-
-- Checagem explícita de schema, deduplicação por `url\_livro`, faixas e nulos críticos.
-
-- \*\*Índices no SQLite\*\*:
-
-- Criar índices (ex.: `categoria`, `titulo`, `rating`) para acelerar buscas e consultas estatísticas.
-
-- \*\*Segurança\*\*:
-
-- Mover `SECRET\_KEY` para variável de ambiente e usar no `auth.py`.
-
-- Aplicar `Depends(get\_current\_user)` onde necessário.
-
-- \*\*Escalabilidade futura\*\*:
-
-- Migrar para Postgres gerenciado.
-
-- Agendar scraping (cron/Lambda) e usar fila (SQS/Kafka) para desacoplar.
-
-- Múltiplas instâncias da API atrás de um Load Balancer.
-
-- Observabilidade: logs estruturados, métricas e dashboard.
-
-# 
-
 # ---
 
 # 
