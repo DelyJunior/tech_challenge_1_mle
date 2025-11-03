@@ -166,7 +166,7 @@ Este repositório implementa um pipeline completo para disponibilizar dados de l
 
 - Exemplo:
 
-  - Request: `curl http://127.0.0.1:8000/`
+  - Request: `curl tech-challenge-1-mle.onrender.com`
 
   - Response: `{"message":"Hello, FastAPI!"}`
 
@@ -178,7 +178,7 @@ Este repositório implementa um pipeline completo para disponibilizar dados de l
 
 - Exemplo:
 
-  - Request: `curl http://127.0.0.1:8000/api/v1/health`
+  - Request: `curl tech-challenge-1-mle.onrender.com/api/v1/health`
 
   - Response (ex.): `{"status":"ok","total\_livros": 1000}`
 
@@ -192,7 +192,7 @@ Este repositório implementa um pipeline completo para disponibilizar dados de l
 
 - Exemplo:
 
-  - Request: `curl http://127.0.0.1:8000/api/v1/books`
+  - Request: `curl tech-challenge-1-mle.onrender.com/api/v1/books`
 
   - Response (ex.): `{"livros\_disponiveis":\[{"titulo":"A Light in the Attic"}, ...]}`
 
@@ -204,7 +204,7 @@ Este repositório implementa um pipeline completo para disponibilizar dados de l
 
 - Exemplo:
 
-  - Request: `curl http://127.0.0.1:8000/api/v1/books/1`
+  - Request: `curl tech-challenge-1-mle.onrender.com/api/v1/books/1`
 
   - Response (ex.): 
 
@@ -240,7 +240,7 @@ Este repositório implementa um pipeline completo para disponibilizar dados de l
 
 - Exemplo:
 
-  - Request: `curl "http://127.0.0.1:8000/api/v1/books/search?title=light\&category=Poetry"`
+  - Request: `curl "tech-challenge-1-mle.onrender.com/api/v1/books/search?title=light\&category=Poetry"`
 
   - Response (ex.): `{"resultado":\[{"ID":1,"titulo":"A Light in the Attic","categoria":"Poetry","disponibilidade":22}]}`
 
@@ -252,7 +252,7 @@ Este repositório implementa um pipeline completo para disponibilizar dados de l
 
 - Exemplo:
 
-  - Request: `curl http://127.0.0.1:8000/api/v1/categories`
+  - Request: `curl tech-challenge-1-mle.onrender.com/api/v1/categories`
 
   - Response (ex.): `{"Categorias\_disponiveis":\[{"categoria":"Poetry"}, {"categoria":"Fiction"}, ...]}`
 
@@ -266,7 +266,7 @@ Este repositório implementa um pipeline completo para disponibilizar dados de l
 
 - Exemplo:
 
-  - Request: `curl http://127.0.0.1:8000/api/v1/stats/overview`
+  - Request: `curl tech-challenge-1-mle.onrender.com/api/v1/stats/overview`
 
   - Response (ex.): 
 
@@ -292,7 +292,7 @@ Este repositório implementa um pipeline completo para disponibilizar dados de l
 
 - Exemplo:
 
-  - Request: `curl http://127.0.0.1:8000/api/v1/stats/categories`
+  - Request: `curl tech-challenge-1-mle.onrender.com/api/v1/stats/categories`
 
   - Response (ex.):
 
@@ -320,7 +320,7 @@ Este repositório implementa um pipeline completo para disponibilizar dados de l
 
 - Exemplo:
 
-  - Request: `curl "http://127.0.0.1:8000/api/v1/books/top-rated?limit=5"`
+  - Request: `curl "tech-challenge-1-mle.onrender.com/api/v1/books/top-rated?limit=5"`
 
   - Response (ex.): `{"top\_rated\_books":\[{"titulo":"Sapiens...", "categoria":"History", "rating":5.0}, ...]}`
 
@@ -332,7 +332,7 @@ Este repositório implementa um pipeline completo para disponibilizar dados de l
 
 - Exemplo:
 
-  - Request: `curl "http://127.0.0.1:8000/api/v1/books/price-range?min=10\&max=30"`
+  - Request: `curl "tech-challenge-1-mle.onrender.com/api/v1/books/price-range?min=10\&max=30"`
 
   - Response (ex.):
 
@@ -360,7 +360,7 @@ Este repositório implementa um pipeline completo para disponibilizar dados de l
 
 - Exemplo:
 
-  - Request: `curl http://127.0.0.1:8000/api/v1/ml/features`
+  - Request: `curl http://tech-challenge-1-mle.onrender.com/api/v1/ml/features`
 
   - Response (ex.):
 
@@ -392,7 +392,7 @@ Este repositório implementa um pipeline completo para disponibilizar dados de l
 
 - Exemplo:
 
-  - Request: `curl http://127.0.0.1:8000/api/v1/ml/training-data`
+  - Request: `curl http://tech-challenge-1-mle.onrender.com/api/v1/ml/training-data`
 
   - Response (ex.):
 
@@ -442,7 +442,7 @@ Este repositório implementa um pipeline completo para disponibilizar dados de l
 
     ```
 
-    curl -X POST http://127.0.0.1:8000/api/v1/ml/predictions \\
+    curl -X POST http://tech-challenge-1-mle.onrender.com/api/v1/ml/predictions \\
 
       -H "Content-Type: application/json" \\
 
@@ -480,7 +480,7 @@ Este repositório implementa um pipeline completo para disponibilizar dados de l
 
     ```
 
-    curl -X POST http://127.0.0.1:8000/add\_user \\
+    curl -X POST http://tech-challenge-1-mle.onrender.com/add\_user \\
 
       -H "Content-Type: application/json" \\
 
@@ -502,7 +502,7 @@ Este repositório implementa um pipeline completo para disponibilizar dados de l
 
     ```
 
-    curl -X POST http://127.0.0.1:8000/api/v1/auth/login \\
+    curl -X POST http://tech-challenge-1-mle.onrender.com/api/v1/auth/login \\
 
       -H "Content-Type: application/x-www-form-urlencoded" \\
 
@@ -530,7 +530,7 @@ Este repositório implementa um pipeline completo para disponibilizar dados de l
 
     ```
 
-    curl -X POST http://127.0.0.1:8000/api/v1/auth/refresh \\
+    curl -X POST http://tech-challenge-1-mle.onrender.com/api/v1/auth/refresh \\
 
       -H "Authorization: Bearer <JWT>"
 
